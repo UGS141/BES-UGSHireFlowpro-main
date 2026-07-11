@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("ugs_user", JSON.stringify(r.data));
       }).catch(() => {}).finally(() => setLoading(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email, password) => {
