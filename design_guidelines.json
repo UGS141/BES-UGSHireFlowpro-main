@@ -1,0 +1,156 @@
+{
+  "brand": {
+    "name": "UGS HireFlow",
+    "company": "UGS IT Solutions",
+    "theme_support": "light_and_dark",
+    "primary_persona": "Enterprise CRM (Data-Heavy) + High-End Marketing",
+    "design_style": "Modern Enterprise SaaS, Glassmorphism, Rounded Cards, Soft Shadows, Smooth Animations, Professional Typography, Responsive"
+  },
+  "typography": {
+    "headings_font": "Outfit",
+    "body_font": "Manrope",
+    "font_setup": "Import via Google Fonts in index.css or index.html",
+    "rules": {
+      "anti_default": "BANNED: Inter, Roboto, Open Sans, Lato for Headings. Use Outfit for high-impact headers and Manrope for clean, highly readable data tables.",
+      "tracking": "Headlines (>32px) MUST use tracking-tight or tracking-tighter.",
+      "labels": "Overlines and table labels MUST be uppercase, text-xs, tracking-[0.2em].",
+      "line_height": "Tight (leading-none) for headers, Loose (leading-relaxed) for body.",
+      "hierarchy": "H1: max text-5xl lg:text-6xl. H2: max text-4xl. Do not exceed these. The jump between a heading and subheading must not exceed 2 Tailwind steps."
+    }
+  },
+  "colors": {
+    "brand_palette": {
+      "primary": "#2563EB",
+      "secondary": "#FFFFFF",
+      "accent": "#10B981"
+    },
+    "backgrounds": {
+      "light": "#F8FAFC",
+      "dark": "#0A0A0C"
+    },
+    "statuses": {
+      "placed": "emerald",
+      "interview": "blue",
+      "waiting": "yellow",
+      "pending_verification": "orange",
+      "rejected": "red",
+      "assigned": "purple",
+      "inactive": "gray"
+    },
+    "payments": {
+      "paid": "emerald",
+      "partial": "yellow",
+      "pending": "red"
+    },
+    "rules": {
+      "anti_pattern": "No generic full-screen gradients. Do not use pure #000000. Use tinted neutrals.",
+      "hover_states": "ALWAYS explicitly set text color on hover (e.g., hover:bg-slate-900 hover:text-white). Hover state color must be a lighter hue of ACTIVE state.",
+      "ctas": "LIMIT the use of PRIMARY color to actual CTAs (buttons, primary forms). Do not blast it everywhere."
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "concept": "The Crystal/Apple Variant. Must feel like milled crystal, not muddy gray.",
+      "light_mode": "bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm",
+      "dark_mode": "bg-black/60 backdrop-blur-xl border border-white/10 shadow-lg",
+      "usage": "Sticky Headers, Floating Navs, Toasts, Modal Overlays, Auth Cards"
+    },
+    "shadows": "Use soft ambient shadows (e.g., shadow-[0_8px_32px_rgba(0,0,0,0.08)]) rather than harsh drop shadows.",
+    "borders": "Expose the grid occasionally for technical dashboard sections: border-r border-b border-border/40."
+  },
+  "component_specs": {
+    "buttons": "Pill-shaped (rounded-full) or smooth rounded (rounded-lg). Use scale-95 on active. Explicitly style hover states.",
+    "cards": "Rounded cards (12px-16px radius). Flat background, 1px subtle border (border-border), no shadow by default. On hover: -translate-y-1, shadow-lg, border darkens.",
+    "status_dots": "8px by 8px rounded-full. Add a 4px transparent ring of the same color for a 'glowing' effect (e.g., bg-emerald-500 ring-4 ring-emerald-500/20).",
+    "timeline": "2px vertical left border in slate-200 (dark: slate-800). Relative positioned glowing status dots on the line. Right-aligned content blocks.",
+    "kanban": "Horizontal scrollable flex/grid. Glassmorphism column headers. Cards inside have subtle drag-and-drop hover shadows and prominent status dots.",
+    "data_tables": "Dense rows (py-2). Left-aligned. Sticky header with glassmorphism to let rows scroll underneath beautifully.",
+    "stat_cards": "Bento-grid summary style. One large metric (text-4xl), a small trend indicator, and minimal label.",
+    "empty_states": "Centered content. Use Lucide icons sized 48px+ with stroke-width 1. Subtle text, clear primary CTA.",
+    "tabs": "Shadcn default tabs have fixed h-9. Override with h-auto py-2. Use pill-backgrounds for active states.",
+    "forms": "Use Shadcn components. Never use native inputs. No completely transparent backgrounds in dropdowns."
+  },
+  "layouts": {
+    "public_landing": {
+      "structure": "Hero (Glassmorphism overlay on image), Bento Grid Features, Social Proof, Dark Footer (py-24, massive brand text).",
+      "rules": "Asymmetric, high visual impact, scroll-triggered effects."
+    },
+    "auth_pages": {
+      "structure": "Split screen layout. Left: Brand imagery/3D element with overlay. Right: Clean, centered glassmorphism login/registration form."
+    },
+    "admin_dashboard": {
+      "structure": "Collapsible Sidebar Nav, Sticky Top Header (Glassmorphism), Dashboard body using Bento Grid (grid-cols-4).",
+      "rules": "High density, strict hierarchy. <= 3 clicks to any major action."
+    },
+    "candidate_workspace": {
+      "structure": "Two-column split (e.g., col-span-3 and col-span-9). Left: Sticky Profile Summary (Photo, Status, Quick Actions). Right: Tabbed interface (Personal, Edu/Exp, Skills, Docs, Interview Timeline, Payments).",
+      "rules": "The heart of the app. Every detail maps back to an emotional 'hired' state. Close-up details, organized."
+    },
+    "interview_pipeline": {
+      "structure": "Kanban board layout. Columns mapping to statuses (Registered, Verified, Assigned, Interview, Round 1/2, Tech, HR, Selected).",
+      "rules": "Visual status dots heavily utilized here."
+    },
+    "reports_view": {
+      "structure": "Top bar global filters (Date, Department, Status). Grid layout of recharts/shadcn charts."
+    }
+  },
+  "grids": {
+    "marketing_tetris": "grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8 to gap-12. Asymmetric span logic.",
+    "dashboard_dense": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 or gap-6. Every pixel utilized. h-full on children."
+  },
+  "motion": {
+    "interactions": "Hover states, micro-interactions on button clicks, staggered entrance animations for lists/tables.",
+    "banned": "transition: all. NEVER USE IT. Use transition-colors, transition-transform.",
+    "accessibility": "Respect prefers-reduced-motion."
+  },
+  "accessibility": {
+    "testing": "All interactive elements MUST have data-testid attributes (kebab-case, role-based).",
+    "contrast": "Ensure min 4.5:1 contrast for small text. Use text shadow if placing text over images."
+  },
+  "media": {
+    "icons_library": "lucide-react (default). Use phosphor-icons for extremely dense dashboards if needed.",
+    "image_urls": [
+      {
+        "category": "Hero Section",
+        "url": "https://images.pexels.com/photos/8134173/pexels-photo-8134173.jpeg",
+        "description": "Collaborative business meeting with three professionals focused on a laptop in a modern office."
+      },
+      {
+        "category": "About Us",
+        "url": "https://images.pexels.com/photos/1313534/pexels-photo-1313534.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Contemporary building facade with reflective glass windows in an urban environment."
+      },
+      {
+        "category": "Services / Tech",
+        "url": "https://images.unsplash.com/photo-1633098096956-afdc8bcc8552",
+        "description": "A close up of a computer screen with a map of the world on it, abstract software tech."
+      }
+    ]
+  },
+  "3d_libraries": {
+    "marketing": "framer-motion for basic layer depth and staggered entrances.",
+    "dashboard": "recharts (integrated via Shadcn ui charts) for data visualization."
+  },
+  "instructions_to_main_agent": [
+    "CRITICAL: The project uses .js files, NOT .tsx. All generated React code must be written in modern JSX/JS (ES6+), not TypeScript.",
+    "Do NOT add TypeScript types or interfaces.",
+    "Use Shadcn UI components wherever possible. If running Shadcn CLI is not possible, implement the UI component manually using Tailwind and Radix UI patterns.",
+    "Make sure to use 'lucide-react' for all icons.",
+    "For toasts, use the Sonner component."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. Always add transitions for specific interactive elements.",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "All interactive and key informational elements MUST include a `data-testid` attribute for automated testing.",
+    "DO NOT use completely transparent backgrounds for dropdowns, overlays, or headers that have content scrolling under them."
+  ]
+}
