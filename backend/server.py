@@ -663,6 +663,7 @@ async def assign_batch_candidates(bid: str, candidate_ids: list[str],
 @api.post("/files/upload")
 async def upload_file(label: str = Form("document"), file: UploadFile = File(...),
                        candidate_id: str = Form(None),
+                       current: dict = Depends(get_current_user)):
     from upload_service import process_and_save_upload, UploadValidationError
     from fastapi.responses import JSONResponse
     try:
