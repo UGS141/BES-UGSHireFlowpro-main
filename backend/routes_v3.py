@@ -58,18 +58,15 @@ class Enquiry(EnquiryBase):
 # ================================================================
 # PLACEMENT GALLERY
 # ================================================================
-async def _upload_placement_file(file: UploadFile, owner_id: str) -> str:
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
-    path = f"{APP_NAME}/placements/{new_id()}.{ext}"
-    data = await file.read()
-    result = put_object(path, data, file.content_type or "application/octet-stream")
-    fr = FileRef(storage_path=result["path"],
-                  original_filename=file.filename,
-                  content_type=file.content_type or "application/octet-stream",
-                  size=result.get("size", len(data)),
-                  owner_id=owner_id)
-    await db.files.insert_one(fr.model_dump())
-    return fr.id
+from fastapi.responses import JSONResponse
+from upload_service import process_and_save_upload, UploadValidationError
+
+# ================================================================
+# PLACEMENT GALLERY
+# ================================================================
+async def _upload_placement_file(file: UploadFile, owner_id: str, label: str) -> str:
+    fr = await process_and_save_upload(file, owner_id=owner_id, label=label)
+    return fr["id"]
 
 
 @router.get("/public/placements")
@@ -101,19 +98,40 @@ async def create_placement(
     company_logo: Optional[UploadFile] = File(None),
     current: dict = Depends(require_roles(["admin"])),
 ):
-    p = Placement(candidate_name=candidate_name, company_name=company_name,
-                    job_role=job_role, package=package, placement_date=placement_date,
-                    short_description=short_description,
-                    display_order=display_order, is_published=is_published)
-    if candidate_photo and candidate_photo.filename:
-        p.candidate_photo_file_id = await _upload_placement_file(candidate_photo, current["id"])
-    if company_logo and company_logo.filename:
-        p.company_logo_file_id = await _upload_placement_file(company_logo, current["id"])
-    await db.placements.insert_one(p.model_dump())
-    await log_activity(current, "placement.created",
-                        f"Added placement: {candidate_name} → {company_name}",
-                        "placement", p.id)
-    return p.model_dump()
+    try:
+        p = Placement(candidate_name=candidate_name, company_name=company_name,
+                        job_role=job_role, package=package, placement_date=placement_date,
+                        short_description=short_description,
+                        display_order=display_order, is_published=is_published)
+        if candidate_photo and candidate_photo.filename:
+            p.candidate_photo_file_id = await _upload_placement_file(candidate_photo, current["id"], "placement_candidate")
+        if company_logo and company_logo.filename:
+            p.company_logo_file_id = await _upload_placement_file(company_logo, current["id"], "company_logo")
+        await db.placements.insert_one(p.model_dump())
+        await log_activity(current, "placement.created",
+                            f"Added placement: {candidate_name} → {company_name}",
+                            "placement", p.id)
+        return p.model_dump()
+    except UploadValidationError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_code": ve.error_code,
+                "message": ve.message,
+                "details": ve.details
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error_code": "UPLOAD_FAILED",
+                "message": "Unable to add placement.",
+                "details": str(e)
+            }
+        )
 
 
 @router.patch("/placements/{pid}")
@@ -131,22 +149,43 @@ async def update_placement(
     company_logo: Optional[UploadFile] = File(None),
     current: dict = Depends(require_roles(["admin"])),
 ):
-    updates = {k: v for k, v in {
-        "candidate_name": candidate_name, "company_name": company_name,
-        "job_role": job_role, "package": package,
-        "placement_date": placement_date, "short_description": short_description,
-        "display_order": display_order, "is_published": is_published,
-    }.items() if v is not None}
-    if candidate_photo and candidate_photo.filename:
-        updates["candidate_photo_file_id"] = await _upload_placement_file(candidate_photo, current["id"])
-    if company_logo and company_logo.filename:
-        updates["company_logo_file_id"] = await _upload_placement_file(company_logo, current["id"])
-    updates["updated_at"] = now_iso()
-    r = await db.placements.update_one({"id": pid}, {"$set": updates})
-    if r.matched_count == 0: raise HTTPException(404)
-    await log_activity(current, "placement.updated", f"Updated placement {pid}",
-                        "placement", pid)
-    return await db.placements.find_one({"id": pid}, {"_id": 0})
+    try:
+        updates = {k: v for k, v in {
+            "candidate_name": candidate_name, "company_name": company_name,
+            "job_role": job_role, "package": package,
+            "placement_date": placement_date, "short_description": short_description,
+            "display_order": display_order, "is_published": is_published,
+        }.items() if v is not None}
+        if candidate_photo and candidate_photo.filename:
+            updates["candidate_photo_file_id"] = await _upload_placement_file(candidate_photo, current["id"], "placement_candidate")
+        if company_logo and company_logo.filename:
+            updates["company_logo_file_id"] = await _upload_placement_file(company_logo, current["id"], "company_logo")
+        updates["updated_at"] = now_iso()
+        r = await db.placements.update_one({"id": pid}, {"$set": updates})
+        if r.matched_count == 0: raise HTTPException(404)
+        await log_activity(current, "placement.updated", f"Updated placement {pid}",
+                            "placement", pid)
+        return await db.placements.find_one({"id": pid}, {"_id": 0})
+    except UploadValidationError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_code": ve.error_code,
+                "message": ve.message,
+                "details": ve.details
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error_code": "UPLOAD_FAILED",
+                "message": "Unable to update placement.",
+                "details": str(e)
+            }
+        )
 
 
 @router.post("/placements/{pid}/publish")

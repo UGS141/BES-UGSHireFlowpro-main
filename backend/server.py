@@ -663,31 +663,37 @@ async def assign_batch_candidates(bid: str, candidate_ids: list[str],
 @api.post("/files/upload")
 async def upload_file(label: str = Form("document"), file: UploadFile = File(...),
                        candidate_id: str = Form(None),
-                       current: dict = Depends(get_current_user)):
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
-    path = f"{APP_NAME}/uploads/{current['id']}/{new_id()}.{ext}"
-    data = await file.read()
+    from upload_service import process_and_save_upload, UploadValidationError
+    from fastapi.responses import JSONResponse
     try:
-        result = put_object(path, data, file.content_type or "application/octet-stream")
+        file_ref_dict = await process_and_save_upload(
+            file=file,
+            owner_id=current["id"],
+            candidate_id=candidate_id,
+            label=label
+        )
+        return file_ref_dict
+    except UploadValidationError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_code": ve.error_code,
+                "message": ve.message,
+                "details": ve.details
+            }
+        )
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
-        raise HTTPException(500, f"Upload failed: {e}")
-    file_ref = FileRef(storage_path=result["path"],
-                        original_filename=file.filename,
-                        content_type=file.content_type or "application/octet-stream",
-                        size=result.get("size", len(data)),
-                        owner_id=current["id"])
-    await db.files.insert_one(file_ref.model_dump())
-    if candidate_id and label in ("resume", "photo"):
-        await db.candidates.update_one({"id": candidate_id},
-                                        {"$set": {f"{label}_file_id": file_ref.id}})
-    elif candidate_id:
-        await db.candidates.update_one({"id": candidate_id},
-                                        {"$push": {"documents": {"id": new_id(),
-                                                                    "label": label,
-                                                                    "file_id": file_ref.id,
-                                                                    "uploaded_at": now_iso()}}})
-    return file_ref.model_dump()
+        logger.exception(f"Unhandled file upload error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error_code": "UPLOAD_FAILED",
+                "message": "Unable to upload file.",
+                "details": str(e)
+            }
+        )
 
 
 @api.get("/files/{fid}/download")
@@ -704,7 +710,19 @@ async def download_file(fid: str, auth: str = Query(None),
     decode_token(token)
     rec = await db.files.find_one({"id": fid, "is_deleted": False})
     if not rec: raise HTTPException(404, "File not found")
-    data, ct = get_object(rec["storage_path"])
+    
+    if rec.get("storage_path", "").startswith("local://"):
+        relative_path = rec["storage_path"].replace("local://", "")
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(backend_dir, relative_path)
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail="File not found on local storage")
+        with open(full_path, "rb") as f:
+            data = f.read()
+        ct = rec.get("content_type") or "application/octet-stream"
+    else:
+        data, ct = get_object(rec["storage_path"])
+        
     return Response(content=data, media_type=rec.get("content_type", ct))
 
 
@@ -857,10 +875,32 @@ app.include_router(v2_router)
 from routes_v3 import router as v3_router, seed_placements_if_empty
 app.include_router(v3_router)
 
+import re
+
+class DynamicCORSMiddleware(CORSMiddleware):
+    def is_allowed_origin(self, origin: str) -> bool:
+        cors_origins = os.environ.get("CORS_ORIGINS", "*")
+        if cors_origins == "*":
+            return True
+            
+        allowed_list = [o.strip() for o in cors_origins.split(",") if o.strip()]
+        if origin in allowed_list:
+            return True
+            
+        # Allow localhost / 127.0.0.1 for local development
+        if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+            return True
+            
+        # Allow Vercel preview/production branch deployments (*.vercel.app)
+        if re.match(r"^https://.*\.vercel\.app$", origin):
+            return True
+            
+        return False
+
 app.add_middleware(
-    CORSMiddleware,
+    DynamicCORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=[],
     allow_methods=["*"],
     allow_headers=["*"],
 )

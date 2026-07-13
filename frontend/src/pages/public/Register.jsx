@@ -33,6 +33,19 @@ export default function Register() {
   const on = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const onFile = (k, multiple = false) => (e) => {
     const f = multiple ? Array.from(e.target.files) : e.target.files?.[0];
+    if (k === "resume" && f) {
+      const ext = f.name.split(".").pop().toLowerCase();
+      if (ext !== "pdf") {
+        toast.error("Only PDF resumes are accepted.");
+        e.target.value = "";
+        return;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        toast.error("Maximum allowed file size is 5 MB.");
+        e.target.value = "";
+        return;
+      }
+    }
     setFiles(prev => ({ ...prev, [k]: f }));
   };
 
@@ -165,14 +178,16 @@ export default function Register() {
           )}
 
           {step === 3 && (
-            <Section icon={FileText} title="Documents & Photo">
-              <p className="text-sm text-muted-foreground -mt-2">Upload during registration — no need to add them later.</p>
-              <div className="grid md:grid-cols-2 gap-4">
-                <FileField label="Profile Photo" hint="JPG/PNG" onChange={onFile("photo")} value={files.photo} testid="reg-photo" />
-                <FileField label="Resume" hint="PDF/DOC" onChange={onFile("resume")} value={files.resume} testid="reg-resume" />
-                <FileField multiple label="Educational Certificates" hint="Add multiple" onChange={onFile("certificates", true)} value={files.certificates} testid="reg-certificates" />
-                <FileField multiple label="Experience Documents" hint="Offer letters, relieving letters" onChange={onFile("experience_documents", true)} value={files.experience_documents} testid="reg-exp-docs" />
-                <FileField multiple full label="Other Supporting Documents" onChange={onFile("supporting_documents", true)} value={files.supporting_documents} testid="reg-supp-docs" />
+            <Section icon={FileText} title="Resume Upload">
+              <p className="text-sm text-muted-foreground -mt-2">Upload your professional resume below.</p>
+              <div className="grid md:grid-cols-1 gap-4">
+                <FileField 
+                  label="Resume" 
+                  hint="Accepted Format: PDF only | Maximum File Size: 5 MB" 
+                  onChange={onFile("resume")} 
+                  value={files.resume} 
+                  testid="reg-resume" 
+                />
               </div>
             </Section>
           )}

@@ -58,21 +58,8 @@ def compute_profile_completion(c: dict) -> int:
     return min(100, score)
 
 
-async def upload_file_for_candidate(file: UploadFile, candidate_id: str,
-                                      label: str, owner_id: str) -> dict:
-    """Upload a file to object storage & DB, return FileRef dict."""
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
-    path = f"{APP_NAME}/uploads/{candidate_id}/{new_id()}.{ext}"
-    data = await file.read()
-    result = put_object(path, data, file.content_type or "application/octet-stream")
-    file_ref = FileRef(storage_path=result["path"],
-                        original_filename=file.filename,
-                        content_type=file.content_type or "application/octet-stream",
-                        size=result.get("size", len(data)),
-                        owner_id=owner_id)
-    await db.files.insert_one(file_ref.model_dump())
-    return file_ref.model_dump()
-
+from fastapi.responses import JSONResponse
+from upload_service import process_and_save_upload, UploadValidationError
 
 # ================================================================
 # COMPREHENSIVE REGISTRATION (multipart with files)
@@ -113,76 +100,105 @@ async def public_register_full(
     experience_documents: List[UploadFile] = File(default_factory=list),
     supporting_documents: List[UploadFile] = File(default_factory=list),
 ):
-    email = email.lower().strip()
-    if await db.candidates.find_one({"email": email}):
-        raise HTTPException(400, "Email already registered")
+    try:
+        email = email.lower().strip()
+        if await db.candidates.find_one({"email": email}):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error_code": "EMAIL_ALREADY_REGISTERED",
+                    "message": "Email already registered."
+                }
+            )
 
-    # Build candidate
-    cand = Candidate(
-        full_name=full_name, email=email, phone=phone,
-        alternate_phone=alternate_phone, date_of_birth=date_of_birth,
-        gender=gender, address=address, city=city, state=state,
-        country=country, pincode=pincode,
-        skills=[s.strip() for s in (skills or "").split(",") if s.strip()],
-        total_experience_years=total_experience_years or 0,
-        current_salary=current_salary, expected_salary=expected_salary,
-        notice_period_days=notice_period_days,
-        preferred_locations=[s.strip() for s in (preferred_locations or "").split(",") if s.strip()],
-        education=[{"degree": education_degree, "institution": education_institution,
-                     "year": education_year}] if education_degree else [],
-        experience=[{"company": experience_company, "role": experience_role,
-                      "duration": experience_duration}] if experience_company else [],
-        reference={"name": reference_name, "phone": reference_phone} if reference_name else None,
-        emergency_contact={"name": emergency_name, "phone": emergency_phone} if emergency_name else None,
-        reference_name=reference_name,
-        reference_phone=reference_phone,
-    )
-    cand.candidate_code = await next_code("candidates", "UGS-C")
+        # Build candidate
+        cand = Candidate(
+            full_name=full_name, email=email, phone=phone,
+            alternate_phone=alternate_phone, date_of_birth=date_of_birth,
+            gender=gender, address=address, city=city, state=state,
+            country=country, pincode=pincode,
+            skills=[s.strip() for s in (skills or "").split(",") if s.strip()],
+            total_experience_years=total_experience_years or 0,
+            current_salary=current_salary, expected_salary=expected_salary,
+            notice_period_days=notice_period_days,
+            preferred_locations=[s.strip() for s in (preferred_locations or "").split(",") if s.strip()],
+            education=[{"degree": education_degree, "institution": education_institution,
+                         "year": education_year}] if education_degree else [],
+            experience=[{"company": experience_company, "role": experience_role,
+                          "duration": experience_duration}] if experience_company else [],
+            reference={"name": reference_name, "phone": reference_phone} if reference_name else None,
+            emergency_contact={"name": emergency_name, "phone": emergency_phone} if emergency_name else None,
+            reference_name=reference_name,
+            reference_phone=reference_phone,
+        )
+        cand.candidate_code = await next_code("candidates", "UGS-C")
 
-    # Upload files
-    if photo:
-        fr = await upload_file_for_candidate(photo, cand.id, "photo", cand.id)
-        cand.photo_file_id = fr["id"]
-    if resume:
-        fr = await upload_file_for_candidate(resume, cand.id, "resume", cand.id)
-        cand.resume_file_id = fr["id"]
-    docs = []
-    for lbl, files in [("certificate", certificates or []),
-                         ("experience_document", experience_documents or []),
-                         ("supporting_document", supporting_documents or [])]:
-        for f in files:
-            if f and f.filename:
-                fr = await upload_file_for_candidate(f, cand.id, lbl, cand.id)
-                docs.append({"id": new_id(), "label": lbl, "file_id": fr["id"],
-                              "uploaded_at": now_iso()})
-    cand.documents = docs
-    cand.profile_completion = compute_profile_completion(cand.model_dump())
+        # Upload files
+        if photo:
+            fr = await process_and_save_upload(photo, owner_id=cand.id, candidate_id=cand.id, label="photo")
+            cand.photo_file_id = fr["id"]
+        if resume:
+            fr = await process_and_save_upload(resume, owner_id=cand.id, candidate_id=cand.id, label="resume")
+            cand.resume_file_id = fr["id"]
+        docs = []
+        for lbl, files in [("certificate", certificates or []),
+                             ("experience_document", experience_documents or []),
+                             ("supporting_document", supporting_documents or [])]:
+            for f in files:
+                if f and f.filename:
+                    fr = await process_and_save_upload(f, owner_id=cand.id, candidate_id=cand.id, label=lbl)
+                    docs.append({"id": new_id(), "label": lbl, "file_id": fr["id"],
+                                  "uploaded_at": now_iso()})
+        cand.documents = docs
+        cand.profile_completion = compute_profile_completion(cand.model_dump())
 
-    await db.candidates.insert_one(cand.model_dump())
+        await db.candidates.insert_one(cand.model_dump())
 
-    # Optional login account
-    if password:
-        await db.users.insert_one({
-            "id": new_id(), "email": cand.email, "full_name": cand.full_name,
-            "role": "candidate", "phone": cand.phone, "is_active": True,
-            "candidate_id": cand.id,
-            "password_hash": hash_password(password),
-            "created_at": now_iso(),
-        })
+        # Optional login account
+        if password:
+            await db.users.insert_one({
+                "id": new_id(), "email": cand.email, "full_name": cand.full_name,
+                "role": "candidate", "phone": cand.phone, "is_active": True,
+                "candidate_id": cand.id,
+                "password_hash": hash_password(password),
+                "created_at": now_iso(),
+            })
 
-    await log_activity(None, "candidate.registered",
-                       f"New candidate registered: {cand.full_name}",
-                       "candidate", cand.id)
+        await log_activity(None, "candidate.registered",
+                           f"New candidate registered: {cand.full_name}",
+                           "candidate", cand.id)
 
-    # Notify admins
-    async for admin in db.users.find({"role": "admin"}):
-        await create_notification(admin["id"], "New Candidate Registration",
-                                    f"{cand.full_name} has registered and awaits verification.",
-                                    "info", f"/app/candidates/{cand.id}")
+        # Notify admins
+        async for admin in db.users.find({"role": "admin"}):
+            await create_notification(admin["id"], "New Candidate Registration",
+                                        f"{cand.full_name} has registered and awaits verification.",
+                                        "info", f"/app/candidates/{cand.id}")
 
-    d = cand.model_dump()
-    d.pop("_id", None)
-    return d
+        d = cand.model_dump()
+        d.pop("_id", None)
+        return d
+    except UploadValidationError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error_code": ve.error_code,
+                "message": ve.message,
+                "details": ve.details
+            }
+        )
+    except Exception as e:
+        logger.exception(f"Unhandled registration error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error_code": "REGISTRATION_FAILED",
+                "message": "Unable to complete registration.",
+                "details": str(e)
+            }
+        )
 
 
 # ================================================================
