@@ -382,6 +382,12 @@ function PaymentsTab({ candidate, onUpdate }) {
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState("upi");
   const [remarks, setRemarks] = useState("");
+  
+  const [vendorType, setVendorType] = useState(candidate.vendor_type || "");
+  const [vendorPeriod, setVendorPeriod] = useState(candidate.vendor_payment_period || "");
+  const [vendorStatus, setVendorStatus] = useState(candidate.vendor_payment_status || "Pending");
+  const [saving, setSaving] = useState(false);
+
   const submit = async () => {
     if (!amount) return;
     try {
@@ -390,8 +396,41 @@ function PaymentsTab({ candidate, onUpdate }) {
       toast.success("Payment recorded"); setAmount(""); setRemarks(""); onUpdate();
     } catch { toast.error("Failed"); }
   };
+
+  const saveVendorSettings = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/candidates/${candidate.id}`, {
+        vendor_type: vendorType,
+        vendor_payment_period: vendorPeriod,
+        vendor_payment_status: vendorStatus
+      });
+      toast.success("Vendor settings saved");
+      onUpdate();
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const fee = candidate.registration_fee || 0;
   const paid = candidate.amount_paid || 0;
+  
+  const formatExpectedDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    try {
+      const d = new Date(dateStr);
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-4">
@@ -399,23 +438,119 @@ function PaymentsTab({ candidate, onUpdate }) {
         <Stat label="Paid" value={`₹${paid.toLocaleString("en-IN")}`} tone="text-emerald-600" />
         <Stat label="Due" value={`₹${Math.max(0, fee - paid).toLocaleString("en-IN")}`} tone="text-red-600" />
       </div>
-      <Card className="p-5 border-border">
-        <div className="font-display font-semibold mb-3">Record Payment</div>
-        <div className="grid md:grid-cols-3 gap-3">
-          <Input placeholder="Amount ₹" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} data-testid="payment-amount" />
-          <Select value={mode} onValueChange={setMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="upi">UPI</SelectItem>
-              <SelectItem value="cash">Cash</SelectItem>
-              <SelectItem value="bank">Bank Transfer</SelectItem>
-              <SelectItem value="card">Card</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-          <Button onClick={submit} className="md:col-span-3" data-testid="add-payment-btn">Add Payment</Button>
-        </div>
-      </Card>
+      
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="p-5 border-border">
+          <div className="font-display font-semibold mb-3">Record Fee Payment</div>
+          <div className="grid grid-cols-1 gap-3">
+            <Input placeholder="Amount ₹" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} data-testid="payment-amount" />
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={mode} onValueChange={setMode}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank">Bank Transfer</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+            </div>
+            <Button onClick={submit} data-testid="add-payment-btn">Add Payment</Button>
+          </div>
+        </Card>
+
+        <Card className="p-5 border-border">
+          <div className="font-display font-semibold mb-3 font-semibold">Vendor Configuration</div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Vendor Type</Label>
+                <Select value={vendorType || "none"} onValueChange={(v) => setVendorType(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not Specified</SelectItem>
+                    <SelectItem value="White Vendor">White Vendor</SelectItem>
+                    <SelectItem value="Blue Vendor">Blue Vendor</SelectItem>
+                    <SelectItem value="Green Vendor">Green Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Period</Label>
+                <Select value={vendorPeriod || "none"} onValueChange={(v) => setVendorPeriod(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Period" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not Specified</SelectItem>
+                    <SelectItem value="20 Days">20 Days</SelectItem>
+                    <SelectItem value="30 Days">30 Days</SelectItem>
+                    <SelectItem value="45 Days">45 Days</SelectItem>
+                    <SelectItem value="60 Days">60 Days</SelectItem>
+                    <SelectItem value="90 Days">90 Days</SelectItem>
+                    <SelectItem value="120 Days">120 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Status</Label>
+              <Select value={vendorStatus} onValueChange={setVendorStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Received">Received</SelectItem>
+                  <SelectItem value="Hold">Hold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={saveVendorSettings} className="w-full" disabled={saving}>
+              {saving ? "Saving..." : "Save Vendor Settings"}
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {candidate.expected_vendor_payment_date && (
+        <Card className="p-5 border-border bg-slate-50 dark:bg-slate-900/60 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected Payment Date</div>
+            <div className="font-semibold mt-1 text-slate-800 dark:text-slate-200">
+              {formatExpectedDate(candidate.expected_vendor_payment_date)}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Remaining Days</div>
+            <div className="font-semibold mt-1">
+              {candidate.vendor_payment_status === "Received" ? (
+                <span className="text-emerald-600 font-bold">Received</span>
+              ) : candidate.vendor_remaining_days !== null ? (
+                <span className={candidate.vendor_remaining_days < 0 ? "text-red-500 font-bold" : "text-slate-800 dark:text-slate-200"}>
+                  {candidate.vendor_remaining_days} Days
+                </span>
+              ) : (
+                "N/A"
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vendor Type</div>
+            <div className="font-semibold mt-1 text-slate-800 dark:text-slate-200">{candidate.vendor_type || "N/A"}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Payment Status</div>
+            <div className="font-semibold mt-1">
+              <span className={
+                candidate.vendor_payment_status === "Received" ? "text-emerald-600 font-bold" :
+                candidate.vendor_payment_status === "Hold" ? "text-amber-600 font-bold" :
+                "text-red-500 font-bold"
+              }>
+                {candidate.vendor_payment_status || "Pending"}
+              </span>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-5 border-border">
         <div className="font-display font-semibold mb-3">History</div>
         {(candidate.payments || []).length === 0 ? <Empty text="No payments yet" /> :

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://bes-ugs-hire-flowpro-main-git-main-ugss-projects.vercel.app/sitemap.xml

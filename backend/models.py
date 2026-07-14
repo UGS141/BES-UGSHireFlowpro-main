@@ -161,6 +161,17 @@ class CandidateBase(BaseModel):
     # Referral captured at registration (before partner assignment)
     reference_name: Optional[str] = None
     reference_phone: Optional[str] = None
+    highest_qualification: Optional[str] = None
+    branch_specialization: Optional[str] = None
+    tenth_percentage: Optional[float] = None
+    intermediate_percentage: Optional[float] = None
+    graduation_percentage: Optional[float] = None
+    vendor_type: Optional[str] = None
+    vendor_payment_period: Optional[str] = None
+    expected_vendor_payment_date: Optional[str] = None
+    vendor_payment_status: Optional[str] = "Pending"
+    vendor_payment_received_date: Optional[str] = None
+    last_notified_days: Optional[int] = None
 
 
 class Candidate(CandidateBase):
@@ -226,6 +237,16 @@ class CandidateUpdate(BaseModel):
     batch_id: Optional[str] = None
     registration_fee: Optional[float] = None
     partner: Optional[PartnerInfo] = None
+    highest_qualification: Optional[str] = None
+    branch_specialization: Optional[str] = None
+    tenth_percentage: Optional[float] = None
+    intermediate_percentage: Optional[float] = None
+    graduation_percentage: Optional[float] = None
+    vendor_type: Optional[str] = None
+    vendor_payment_period: Optional[str] = None
+    expected_vendor_payment_date: Optional[str] = None
+    vendor_payment_status: Optional[str] = None
+    vendor_payment_received_date: Optional[str] = None
 
 
 # ============ EMPLOYEE ============

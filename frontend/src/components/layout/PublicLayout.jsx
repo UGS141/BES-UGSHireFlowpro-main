@@ -101,7 +101,7 @@ export function PublicLayout() {
           </div>
         </div>
         <div className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-          © 2026 BES Consultancy · Powered by UGS HireFlow · UGS IT Solutions
+          © 2026 BES Consultancy · Powered by BES Info Tech
         </div>
       </footer>
     </div>

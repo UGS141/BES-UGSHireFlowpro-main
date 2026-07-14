@@ -72,6 +72,38 @@ export default function AdminDashboard() {
         ))}
       </Stagger>
 
+      {isAdmin && data.vendor_stats && (
+        <div className="space-y-3 mt-6">
+          <div className="overline text-primary">Vendor Payments Summary</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 border-border soft-shadow">
+              <div className="overline text-[10px] text-muted-foreground">Total Pending Payments</div>
+              <div className="mt-1 font-display text-2xl font-bold text-slate-800 dark:text-slate-200">
+                {data.vendor_stats.total_pending}
+              </div>
+            </Card>
+            <Card className="p-4 border-border soft-shadow">
+              <div className="overline text-[10px] text-muted-foreground">Payments Due Today</div>
+              <div className="mt-1 font-display text-2xl font-bold text-amber-600 dark:text-amber-500">
+                {data.vendor_stats.due_today}
+              </div>
+            </Card>
+            <Card className="p-4 border-border soft-shadow">
+              <div className="overline text-[10px] text-muted-foreground">Overdue Payments</div>
+              <div className="mt-1 font-display text-2xl font-bold text-red-500 dark:text-red-400">
+                {data.vendor_stats.overdue}
+              </div>
+            </Card>
+            <Card className="p-4 border-border soft-shadow">
+              <div className="overline text-[10px] text-muted-foreground">Received This Month</div>
+              <div className="mt-1 font-display text-2xl font-bold text-emerald-600 dark:text-emerald-500">
+                {data.vendor_stats.received_this_month}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {isAdmin && (
         <div className="grid lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 p-6 border-border">
@@ -106,6 +138,72 @@ export default function AdminDashboard() {
             </div>
           </Card>
         </div>
+      )}
+
+      {isAdmin && (
+        <Card className="p-6 border-border mt-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-lg font-semibold">Vendor Payment Reminders</h3>
+            <span className="text-xs text-muted-foreground">Sorted by nearest due date</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="py-2.5 px-3">Candidate</th>
+                  <th className="py-2.5 px-3">Vendor Type</th>
+                  <th className="py-2.5 px-3">Remaining Days</th>
+                  <th className="py-2.5 px-3">Payment Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.vendor_payment_reminders || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted-foreground">No pending vendor payments</td>
+                  </tr>
+                ) : (
+                  data.vendor_payment_reminders.map(r => (
+                    <tr key={r.id} className="border-b border-border/40 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3">
+                        <Link to={`/app/candidates/${r.id}`} className="font-medium text-primary hover:underline">
+                          {r.full_name} ({r.candidate_code || "N/A"})
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{r.vendor_type}</td>
+                      <td className="py-2.5 px-3">
+                        {r.vendor_remaining_days !== null ? (
+                          <span className={
+                            r.vendor_remaining_days < 0 
+                              ? "text-red-500 font-bold" 
+                              : r.vendor_remaining_days <= 3 
+                                ? "text-amber-500 font-semibold animate-pulse" 
+                                : "text-slate-700 dark:text-slate-300"
+                          }>
+                            {r.vendor_remaining_days < 0 
+                              ? `Overdue (${Math.abs(r.vendor_remaining_days)} Days)` 
+                              : r.vendor_remaining_days === 0 
+                                ? "Due Today" 
+                                : `${r.vendor_remaining_days} Days`
+                            }
+                          </span>
+                        ) : "N/A"}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          r.vendor_payment_status === "Hold" 
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" 
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}>
+                          {r.vendor_payment_status || "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">

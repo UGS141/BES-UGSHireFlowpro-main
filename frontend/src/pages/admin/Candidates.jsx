@@ -24,13 +24,24 @@ export default function Candidates() {
   const [partnerId, setPartnerId] = useState(sp.get("partner_id") || "");
   const [includeArchived, setIncludeArchived] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [vendorType, setVendorType] = useState("");
+  const [vendorPaymentStatus, setVendorPaymentStatus] = useState("");
+  const [experience, setExperience] = useState("");
+  const [remainingDays, setRemainingDays] = useState("");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["candidates", q, status, payment, employeeId, partnerId, includeArchived],
+    queryKey: [
+      "candidates", q, status, payment, employeeId, partnerId, includeArchived,
+      vendorType, vendorPaymentStatus, experience, remainingDays
+    ],
     queryFn: async () => (await api.get("/candidates", { params: {
       q, status, payment_status: payment,
       employee_id: employeeId, partner_id: partnerId,
       include_archived: includeArchived,
+      vendor_type: vendorType,
+      vendor_payment_status: vendorPaymentStatus,
+      experience: experience ? parseFloat(experience) : undefined,
+      remaining_days: remainingDays ? parseInt(remainingDays) : undefined,
     } })).data,
   });
   const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: async () => (await api.get("/employees")).data });
@@ -43,7 +54,11 @@ export default function Candidates() {
   const items = data?.items || [];
   const partnerObj = partners.find(p => p.id === partnerId);
 
-  const clearFilters = () => { setQ(""); setStatus(""); setPayment(""); setEmployeeId(""); setPartnerId(""); setIncludeArchived(false); setSp({}); };
+  const clearFilters = () => {
+    setQ(""); setStatus(""); setPayment(""); setEmployeeId(""); setPartnerId(""); setIncludeArchived(false);
+    setVendorType(""); setVendorPaymentStatus(""); setExperience(""); setRemainingDays("");
+    setSp({});
+  };
 
   const saveCurrent = async () => {
     const name = prompt("Filter name?");
@@ -135,6 +150,44 @@ export default function Candidates() {
               {partners.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.candidate_count || 0})</SelectItem>)}
             </SelectContent>
           </Select>
+
+          <Select value={vendorType || "all"} onValueChange={(v) => setVendorType(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-40" data-testid="candidates-vendor-type-filter"><SelectValue placeholder="Vendor Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Vendors</SelectItem>
+              <SelectItem value="White Vendor">White Vendor</SelectItem>
+              <SelectItem value="Blue Vendor">Blue Vendor</SelectItem>
+              <SelectItem value="Green Vendor">Green Vendor</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={vendorPaymentStatus || "all"} onValueChange={(v) => setVendorPaymentStatus(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-44" data-testid="candidates-vendor-status-filter"><SelectValue placeholder="Vendor Pay Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Vendor Payments</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Received">Received</SelectItem>
+              <SelectItem value="Hold">Hold</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            placeholder="Min Exp (Years)"
+            type="number"
+            value={experience}
+            onChange={(e) => setExperience(e.target.value)}
+            className="w-36"
+            data-testid="candidates-experience-filter"
+          />
+
+          <Input
+            placeholder="Max Rem. Days"
+            type="number"
+            value={remainingDays}
+            onChange={(e) => setRemainingDays(e.target.value)}
+            className="w-36"
+            data-testid="candidates-remdays-filter"
+          />
           <Button variant={includeArchived ? "default" : "outline"} size="sm" onClick={() => setIncludeArchived(v => !v)} data-testid="toggle-archived">
             {includeArchived ? "Hide archived" : "Show archived"}
           </Button>

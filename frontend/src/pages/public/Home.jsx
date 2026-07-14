@@ -45,13 +45,13 @@ const BENEFITS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Rakesh Menon", role: "Managing Partner, TechHire Consulting", stars: 5, quote: "We moved 15 years of Excel to HireFlow in a weekend. Our team stopped fighting spreadsheets and started closing placements." },
+  { name: "Rakesh Menon", role: "Managing Partner, TechHire Consulting", stars: 5, quote: "We moved 15 years of Excel to BES Consultancy in a weekend. Our team stopped fighting spreadsheets and started closing placements." },
   { name: "Sneha Patel", role: "Head of Recruitment, ScaleForce Talent", stars: 5, quote: "The pipeline view alone paid for the platform. We can see every candidate, every stage, in real time." },
   { name: "Vivek Rao", role: "Founder, BluePeak Placements", stars: 5, quote: "Partner tracking transformed our referral business. We now pay commissions on time and partners send us 3× the candidates." },
 ];
 
 const FAQ = [
-  { q: "How different is HireFlow from a generic CRM?", a: "HireFlow is purpose-built for recruitment consultancies. Every module — candidates, pipeline, partners, batches, payments — models real recruitment workflows, not sales workflows." },
+  { q: "How different is BES Consultancy from other agencies?", a: "BES Consultancy is a premier recruitment consultancy with a purpose-built system. Every module — candidates, pipeline, partners, batches, payments — is optimized for real placement workflows, not generic sales." },
   { q: "Can we migrate our existing Excel data?", a: "Yes. Upload .xlsx or .csv files with a click. We preview the data, flag duplicates, and give you a full import summary." },
   { q: "How is data secured?", a: "JWT authentication, role-based access control (Admin / Recruiter / Candidate), encrypted passwords, and a complete audit log of every action." },
   { q: "Can our candidates track their own status?", a: "Yes. Every candidate can register on your public site and log in to a workspace showing their timeline, recruiter, company, job, and payment status." },
@@ -59,6 +59,57 @@ const FAQ = [
 ];
 
 export default function Home() {
+  React.useEffect(() => {
+    document.title = "BES Consultancy | Premier Recruitment & Placement Services";
+    
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute("content", "BES Consultancy (BES Info Tech) is India's leading recruitment partner since 2010. We connect top talent with premier companies for IT, Non-IT, and campus placements.");
+    }
+    
+    const scriptId = "seo-schema-home";
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.type = "application/ld+json";
+      document.head.appendChild(script);
+    }
+    script.innerHTML = JSON.stringify([
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "BES Consultancy",
+        "alternateName": "BES Info Tech",
+        "url": window.location.origin,
+        "logo": window.location.origin + "/logo.png",
+        "foundingDate": "2010"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "BES Consultancy",
+        "image": window.location.origin + "/logo.png",
+        "@id": window.location.origin + "/#localbusiness",
+        "url": window.location.origin,
+        "telephone": "+91 90000 00000",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "HITEC City",
+          "addressLocality": "Hyderabad",
+          "addressRegion": "Telangana",
+          "postalCode": "500081",
+          "addressCountry": "IN"
+        }
+      }
+    ]);
+    
+    return () => {
+      const s = document.getElementById(scriptId);
+      if (s) s.remove();
+    };
+  }, []);
+
   return (
     <div>
       {/* ================ HERO ================ */}
@@ -150,7 +201,7 @@ export default function Home() {
             <div className="text-center max-w-2xl mx-auto">
               <div className="overline text-primary">Recruitment Workflow</div>
               <h2 className="mt-3 font-display text-4xl lg:text-5xl font-bold tracking-tighter">From registration to placement — automated.</h2>
-              <p className="mt-4 text-slate-600 dark:text-slate-300">Every candidate flows through the same predictable stages. HireFlow tracks it, notifies your team, and never lets a candidate fall through the cracks.</p>
+              <p className="mt-4 text-slate-600 dark:text-slate-300">Every candidate flows through the same predictable stages. BES Consultancy tracks it, notifies your team, and never lets a candidate fall through the cracks.</p>
             </div>
           </Reveal>
           <div className="mt-14"><WorkflowAnimation /></div>
@@ -212,7 +263,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto">
-              <div className="overline text-primary">Why UGS HireFlow</div>
+              <div className="overline text-primary">Why BES Consultancy</div>
               <h2 className="mt-3 font-display text-4xl lg:text-5xl font-bold tracking-tighter">Built for consultancies. Not sales teams.</h2>
             </div>
           </Reveal>

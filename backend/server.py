@@ -48,9 +48,61 @@ async def next_code(collection: str, prefix: str) -> str:
     return f"{prefix}-{count + 1:04d}"
 
 
+async def notify_admins_of_vendor_payment(candidate: dict, reason: str, remaining: int):
+    async for admin in db.users.find({"role": "admin"}):
+        await create_notification(
+            user_id=admin["id"],
+            title=f"Vendor Payment Due: {reason}",
+            message=f"Vendor payment for candidate {candidate['full_name']} ({candidate.get('candidate_code', 'N/A')}) is due. Status: {candidate.get('vendor_payment_status')}. Days Remaining: {remaining}.",
+            type_="warning",
+            link=f"/app/candidates/{candidate['id']}"
+        )
+
+
+async def vendor_payment_scheduler_task():
+    import asyncio
+    from datetime import datetime, date
+    import logging
+    logger = logging.getLogger("ugs.vendor_payment_scheduler")
+    
+    while True:
+        try:
+            today = date.today()
+            logger.info("Checking vendor payments for reminders...")
+            async for c in db.candidates.find({"expected_vendor_payment_date": {"$ne": None}, "vendor_payment_status": {"$ne": "Received"}}):
+                try:
+                    exp_date = datetime.strptime(c["expected_vendor_payment_date"], "%Y-%m-%d").date()
+                    rem = (exp_date - today).days
+                    
+                    last_notified = c.get("last_notified_days")
+                    
+                    # Notify Admin when: Vendor Payment Due: 7 Days Remaining, 3 Days Remaining, Today, Overdue
+                    # If status becomes "Received", stop reminder notifications (covered by vendor_payment_status != Received in query)
+                    if rem == 7 and last_notified != 7:
+                        await notify_admins_of_vendor_payment(c, "7 Days Remaining", rem)
+                        await db.candidates.update_one({"id": c["id"]}, {"$set": {"last_notified_days": 7}})
+                    elif rem == 3 and last_notified != 3:
+                        await notify_admins_of_vendor_payment(c, "3 Days Remaining", rem)
+                        await db.candidates.update_one({"id": c["id"]}, {"$set": {"last_notified_days": 3}})
+                    elif rem == 0 and last_notified != 0:
+                        await notify_admins_of_vendor_payment(c, "Today", rem)
+                        await db.candidates.update_one({"id": c["id"]}, {"$set": {"last_notified_days": 0}})
+                    elif rem < 0 and (last_notified is None or last_notified >= 0):
+                        await notify_admins_of_vendor_payment(c, "Overdue", rem)
+                        await db.candidates.update_one({"id": c["id"]}, {"$set": {"last_notified_days": -1}})
+                except Exception as ex:
+                    logger.error(f"Error checking candidate {c.get('id')}: {ex}")
+        except Exception as e:
+            logger.error(f"Error in vendor payment scheduler task: {e}")
+        # Sleep for 12 hours (runs twice a day)
+        await asyncio.sleep(12 * 3600)
+
+
 # ---------- STARTUP ----------
 @app.on_event("startup")
 async def startup():
+    import asyncio
+    asyncio.create_task(vendor_payment_scheduler_task())
     try:
         init_storage()
     except Exception as e:
@@ -175,11 +227,36 @@ async def public_register(body: CandidateCreate):
     return doc
 
 
+def compute_vendor_remaining_days(c: dict) -> dict:
+    if not c:
+        return c
+    exp_date_str = c.get("expected_vendor_payment_date")
+    if exp_date_str:
+        try:
+            from datetime import datetime, date
+            exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d").date()
+            if c.get("vendor_payment_status") == "Received":
+                if c.get("vendor_payment_received_date"):
+                    recv_date = datetime.strptime(c["vendor_payment_received_date"], "%Y-%m-%d").date()
+                    c["vendor_remaining_days"] = (exp_date - recv_date).days
+                else:
+                    c["vendor_remaining_days"] = 0
+            else:
+                c["vendor_remaining_days"] = (exp_date - date.today()).days
+        except Exception:
+            c["vendor_remaining_days"] = None
+    else:
+        c["vendor_remaining_days"] = None
+    return c
+
+
 # ============ CANDIDATES ============
 @api.get("/candidates")
 async def list_candidates(
     q: str = "", status: str = "", employee_id: str = "", company_id: str = "",
     batch_id: str = "", payment_status: str = "", partner_id: str = "",
+    vendor_type: str = "", vendor_payment_status: str = "",
+    experience: Optional[float] = None, remaining_days: Optional[int] = None,
     include_archived: bool = False,
     skip: int = 0, limit: int = 100,
     current: dict = Depends(get_current_user),
@@ -204,8 +281,18 @@ async def list_candidates(
     if batch_id: filt["batch_id"] = batch_id
     if payment_status: filt["payment_status"] = payment_status
     if partner_id: filt["partner_id"] = partner_id
+    if vendor_type: filt["vendor_type"] = vendor_type
+    if vendor_payment_status: filt["vendor_payment_status"] = vendor_payment_status
+    if experience is not None: filt["total_experience_years"] = {"$gte": experience}
+    if remaining_days is not None:
+        from datetime import date, timedelta
+        max_date = (date.today() + timedelta(days=remaining_days)).strftime("%Y-%m-%d")
+        filt["expected_vendor_payment_date"] = {"$lte": max_date, "$ne": None}
+
     cursor = db.candidates.find(filt, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
     items = await cursor.to_list(limit)
+    for item in items:
+        compute_vendor_remaining_days(item)
     total = await db.candidates.count_documents(filt)
     return {"items": items, "total": total}
 
@@ -220,7 +307,7 @@ async def get_candidate(cid: str, current: dict = Depends(get_current_user)):
             raise HTTPException(403, "Forbidden")
     if current["role"] == "employee" and c.get("assigned_employee_id") != current["id"]:
         raise HTTPException(403, "Forbidden")
-    return c
+    return compute_vendor_remaining_days(c)
 
 
 @api.post("/candidates")
@@ -245,13 +332,31 @@ async def update_candidate(cid: str, body: CandidateUpdate, current: dict = Depe
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(400, "No fields to update")
+        
+    # Calculate vendor expected date if period is set/updated
+    if "vendor_payment_period" in updates and updates["vendor_payment_period"]:
+        try:
+            from datetime import date, timedelta
+            days = int(updates["vendor_payment_period"].split()[0])
+            updates["expected_vendor_payment_date"] = (date.today() + timedelta(days=days)).strftime("%Y-%m-%d")
+        except Exception as e:
+            logger.error(f"Error parsing vendor payment period: {e}")
+            
+    # Calculate vendor payment received date if status changes
+    if "vendor_payment_status" in updates:
+        if updates["vendor_payment_status"] == "Received":
+            from datetime import date
+            updates["vendor_payment_received_date"] = date.today().strftime("%Y-%m-%d")
+        else:
+            updates["vendor_payment_received_date"] = None
+
     updates["updated_at"] = now_iso()
     result = await db.candidates.update_one({"id": cid}, {"$set": updates})
     if result.matched_count == 0:
         raise HTTPException(404, "Not found")
     await log_activity(current, "candidate.updated", f"Updated candidate {cid}", "candidate", cid, updates)
     c = await db.candidates.find_one({"id": cid}, {"_id": 0})
-    return c
+    return compute_vendor_remaining_days(c)
 
 
 @api.post("/candidates/{cid}/verify")
@@ -785,6 +890,39 @@ async def admin_dashboard(current: dict = Depends(require_roles(["admin"]))):
 
     recent = await db.candidates.find({}, {"_id": 0}).sort("created_at", -1).limit(6).to_list(6)
     activities = await db.activity_logs.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Calculate Vendor Payment Reminders and summary stats dynamically
+    from datetime import date
+    today_str = date.today().strftime("%Y-%m-%d")
+    month_prefix = date.today().strftime("%Y-%m")
+    
+    rem_cursor = db.candidates.find(
+        {"expected_vendor_payment_date": {"$ne": None}, "vendor_payment_status": {"$ne": "Received"}},
+        {"_id": 0}
+    )
+    rem_items = await rem_cursor.to_list(100)
+    for item in rem_items:
+        compute_vendor_remaining_days(item)
+    # Sort reminders by remaining days ascending (nearest due date first)
+    rem_items.sort(key=lambda x: x.get("vendor_remaining_days") if x.get("vendor_remaining_days") is not None else 99999)
+    
+    total_pending = await db.candidates.count_documents({
+        "expected_vendor_payment_date": {"$ne": None},
+        "vendor_payment_status": {"$in": ["Pending", "Hold"]}
+    })
+    due_today = await db.candidates.count_documents({
+        "expected_vendor_payment_date": today_str,
+        "vendor_payment_status": {"$ne": "Received"}
+    })
+    overdue = await db.candidates.count_documents({
+        "expected_vendor_payment_date": {"$lt": today_str},
+        "vendor_payment_status": {"$ne": "Received"}
+    })
+    received_this_month = await db.candidates.count_documents({
+        "vendor_payment_status": "Received",
+        "vendor_payment_received_date": {"$regex": f"^{month_prefix}"}
+    })
+
     return {
         "kpis": {"total_candidates": total_cand, "pending_verification": pending,
                  "placed": placed, "in_pipeline": in_pipeline,
@@ -794,6 +932,13 @@ async def admin_dashboard(current: dict = Depends(require_roles(["admin"]))):
         "status_distribution": status_dist,
         "recent_candidates": recent,
         "recent_activities": activities,
+        "vendor_payment_reminders": rem_items,
+        "vendor_stats": {
+            "total_pending": total_pending,
+            "due_today": due_today,
+            "overdue": overdue,
+            "received_this_month": received_this_month
+        }
     }
 
 
