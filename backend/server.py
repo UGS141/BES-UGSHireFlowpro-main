@@ -10,6 +10,7 @@ import csv
 import uuid
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
