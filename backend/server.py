@@ -897,7 +897,8 @@ async def upload_file(label: str = Form("document"), file: UploadFile = File(...
 
 @api.get("/files/{fid}/download")
 async def download_file(fid: str, auth: str = Query(None),
-                          authorization: str = Header(None)):
+                          authorization: str = Header(None),
+                          download: Optional[bool] = Query(None)):
     # Support token via query or header (needed for <img src>)
     from auth import decode_token
     token = None
@@ -914,14 +915,19 @@ async def download_file(fid: str, auth: str = Query(None),
     p_id = rec.get("public_id")
     s_url = rec.get("storage_path")
     r_type = rec.get("resource_type")
-    logger.info(f"Serving file - public_id: {p_id}, secure_url: {s_url}, resource_type: {r_type}")
+    logger.info(f"Serving file - public_id: {p_id}, secure_url: {s_url}, resource_type: {r_type}, download_param: {download}")
 
     if rec.get("storage_path", "").startswith("http://") or rec.get("storage_path", "").startswith("https://"):
-        from fastapi.responses import RedirectResponse
-        logger.info(f"Redirecting directly to Cloudinary storage: {s_url}")
-        return RedirectResponse(url=s_url)
-
-    if rec.get("storage_path", "").startswith("local://"):
+        import requests
+        try:
+            resp = requests.get(rec["storage_path"], timeout=30)
+            resp.raise_for_status()
+            data = resp.content
+            ct = rec.get("content_type") or resp.headers.get("Content-Type", "application/octet-stream")
+        except Exception as e:
+            logger.error(f"Failed to fetch file from Cloudinary URL {rec['storage_path']}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch file from remote persistent storage")
+    elif rec.get("storage_path", "").startswith("local://"):
         relative_path = rec["storage_path"].replace("local://", "")
         backend_dir = os.path.dirname(os.path.abspath(__file__))
         full_path = os.path.join(backend_dir, relative_path)
@@ -932,8 +938,20 @@ async def download_file(fid: str, auth: str = Query(None),
         ct = rec.get("content_type") or "application/octet-stream"
     else:
         data, ct = get_object(rec["storage_path"])
-        
-    return Response(content=data, media_type=rec.get("content_type", ct))
+
+    filename = rec.get("original_filename") or "file.pdf"
+    if filename.lower().endswith(".pdf"):
+        ct = "application/pdf"
+    elif not ct:
+        ct = "application/octet-stream"
+
+    headers = {}
+    if download:
+        headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    else:
+        headers["Content-Disposition"] = "inline"
+
+    return Response(content=data, media_type=ct, headers=headers)
 
 
 # ============ NOTIFICATIONS ============
