@@ -155,12 +155,12 @@ async def process_and_save_upload(
             file_stream.name = file.filename or f"file.{ext}"
 
             clean_filename = f"{new_id()}"
-            if ext:
+            if ext and ext != "pdf":
                 clean_filename = f"{clean_filename}.{ext}"
             public_id = f"ugs-hireflow/uploads/{owner_id or 'public'}/{clean_filename}"
             
-            # PDFs must always use resource_type="raw"
-            res_type = "raw" if ext == "pdf" else "auto"
+            # PDFs are uploaded as 'image' to bypass Cloudinary's raw file delivery restrictions on free/untrusted accounts
+            res_type = "image" if ext == "pdf" else "auto"
             
             logger.info(f"Uploading file to Cloudinary: {public_id} with resource_type={res_type}")
             result = cloudinary.uploader.upload(
