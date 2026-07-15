@@ -393,6 +393,13 @@ async def get_candidate(cid: str, current: dict = Depends(get_current_user)):
             raise HTTPException(403, "Forbidden")
     if current["role"] == "employee" and c.get("assigned_employee_id") != current["id"]:
         raise HTTPException(403, "Forbidden")
+
+    # Populate resume file info if present
+    if c.get("resume_file_id"):
+        res_file = await db.files.find_one({"id": c["resume_file_id"]}, {"_id": 0})
+        if res_file:
+            c["resume_file"] = res_file
+
     return compute_vendor_remaining_days(c)
 
 

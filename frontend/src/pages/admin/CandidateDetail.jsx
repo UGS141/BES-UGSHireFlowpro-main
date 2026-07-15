@@ -18,7 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { StatusPill, StatusDot } from "@/components/StatusDot";
 import { useAuth } from "@/context/AuthContext";
-import api from "@/lib/api";
+import api, { API_BASE } from "@/lib/api";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const STAGES = ["verified", "assigned", "profile_reviewed", "company_assigned",
   "interview_scheduled", "round_1", "round_2", "technical", "hr",
@@ -43,10 +44,15 @@ export default function CandidateDetail() {
     queryKey: ["partners"], queryFn: async () => (await api.get("/partners")).data,
     enabled: user?.role === "admin",
   });
+  const { data: activities = [] } = useQuery({
+    queryKey: ["activity", id],
+    queryFn: async () => (await api.get("/activity-logs", { params: { entity_id: id } })).data,
+  });
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["candidate", id] });
     qc.invalidateQueries({ queryKey: ["partners"] });
+    qc.invalidateQueries({ queryKey: ["activity", id] });
   };
 
   if (isLoading || !c) return <div className="text-muted-foreground">Loading...</div>;
@@ -57,6 +63,20 @@ export default function CandidateDetail() {
       await api.post(`/candidates/${id}/assign`, fd);
       toast.success("Assigned"); refresh();
     } catch { toast.error("Failed"); }
+  };
+
+  const handleReplaceResume = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file); fd.append("label", "resume"); fd.append("candidate_id", id);
+    try {
+      await api.post("/files/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success("Resume replaced successfully");
+      refresh();
+    } catch {
+      toast.error("Failed to replace resume");
+    }
+    e.target.value = "";
   };
   const archive = async () => {
     try { await api.post(`/candidates/${id}/archive`); toast.success("Archived"); refresh(); }
@@ -109,16 +129,13 @@ export default function CandidateDetail() {
             </div>
           )}
           <div className="mt-6 space-y-2.5 text-sm">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Quick Information</div>
             <Row label="Email" value={c.email || "—"} />
-            <Row label="Phone" value={c.phone || "—"} />
-            <Row label="Experience" value={c.experience_type || "Fresher"} />
-            {c.experience_type === "Experienced" && (
-              <>
-                <Row label="Prev. Company" value={c.previous_company || "—"} />
-                <Row label="Notice Period" value={c.notice_period || "—"} />
-              </>
-            )}
-            <Row label="Qualification" value={c.highest_qualification || "—"} />
+            <Row label="Mobile Number" value={c.phone || "—"} />
+            <Row label="Assigned Recruiter" value={linkedEmp?.full_name || "—"} />
+            <Row label="Assigned Partner" value={linkedPartner?.name || "—"} />
+            <Row label="Registration Date" value={c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"} />
+            <Row label="Resume Status" value={c.resume_file_id ? "Uploaded" : "Not Uploaded"} />
           </div>
 
           {/* RELATED */}
@@ -188,88 +205,148 @@ export default function CandidateDetail() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
-              {/* Profile Summary Card */}
-              <Card className="p-6 border-border">
-                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
-                  <User className="h-5 w-5 text-primary" />
-                  <h3 className="font-display font-semibold text-lg">Profile Summary</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <InfoItem label="Candidate Name" value={c.full_name} />
-                  <InfoItem label="Candidate ID" value={c.candidate_code} />
-                  <InfoItem label="Status" value={<StatusPill status={c.status} />} />
-                  <InfoItem label="Recruiter" value={linkedEmp?.full_name || "—"} />
-                  <InfoItem label="Partner" value={linkedPartner?.name || "—"} />
-                  <InfoItem label="Payment Status" value={<StatusPill status={c.payment_status} />} />
-                  <InfoItem label="Verification Status" value={c.status === "pending_verification" ? "Pending Verification" : "Verified"} />
-                  <InfoItem 
-                    label="Resume Status" 
-                    value={
-                      c.resume_file_id ? (
-                        <a 
-                          href={`${API_BASE}/files/${c.resume_file_id}/download?auth=${localStorage.getItem("ugs_token")}`} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-primary hover:underline font-semibold"
-                        >
-                          View Uploaded Resume (PDF)
-                        </a>
-                      ) : "Not Uploaded"
-                    } 
-                  />
-                </div>
-              </Card>
+              <Accordion type="multiple" defaultValue={["sec-resume", "sec-details", "sec-exp", "sec-recruitment", "sec-activity"]} className="space-y-4">
+                
+                {/* SECTION 1: Resume */}
+                <AccordionItem value="sec-resume" className="border border-border rounded-xl bg-white dark:bg-slate-900/40 px-5 overflow-hidden">
+                  <AccordionTrigger className="font-display font-semibold text-base py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <span>Resume Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-xl border border-border/50">
+                      <InfoItem label="Resume Uploaded" value={c.resume_file_id ? "Yes" : "No"} />
+                      <InfoItem label="File Name" value={c.resume_file?.original_filename || "—"} />
+                      <InfoItem label="Upload Date" value={c.resume_file?.created_at ? new Date(c.resume_file.created_at).toLocaleDateString() : "—"} />
+                      <InfoItem label="File Size" value={c.resume_file?.size ? `${(c.resume_file.size / (1024 * 1024)).toFixed(2)} MB` : "—"} />
+                    </div>
+                    {c.resume_file_id && (
+                      <div className="flex flex-wrap gap-3">
+                        <Button asChild size="sm">
+                          <a 
+                            href={`${API_BASE}/files/${c.resume_file_id}/download?auth=${localStorage.getItem("ugs_token")}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                          >
+                            View Resume
+                          </a>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <a 
+                            href={`${API_BASE}/files/${c.resume_file_id}/download?auth=${localStorage.getItem("ugs_token")}&download=true`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                          >
+                            Download Resume
+                          </a>
+                        </Button>
+                        {user?.role === "admin" && (
+                          <>
+                            <input type="file" id="replace-resume-input" onChange={handleReplaceResume} className="hidden" accept=".pdf" />
+                            <Button variant="outline" size="sm" onClick={() => document.getElementById("replace-resume-input").click()}>
+                              <Upload className="h-4 w-4 mr-1.5" /> Replace Resume
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* Personal Details Card */}
-              <Card className="p-6 border-border">
-                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  <h3 className="font-display font-semibold text-lg">Personal & Education Details</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <InfoItem label="Full Name" value={c.full_name} />
-                  <InfoItem label="Email" value={c.email} />
-                  <InfoItem label="Phone" value={c.phone} />
-                  <InfoItem label="Highest Qualification" value={c.highest_qualification} />
-                  <InfoItem label="Branch / Specialization" value={c.branch_specialization} />
-                  <InfoItem label="10th Percentage / CGPA" value={c.tenth_percentage ? `${c.tenth_percentage}%` : "—"} />
-                  <InfoItem label="Intermediate / Diploma %" value={c.intermediate_percentage ? `${c.intermediate_percentage}%` : "—"} />
-                  <InfoItem label="Graduation %" value={c.graduation_percentage ? `${c.graduation_percentage}%` : "—"} />
-                  <InfoItem label="Reference Name" value={c.reference_name || "—"} />
-                </div>
-              </Card>
+                {/* SECTION 2: Application Details */}
+                <AccordionItem value="sec-details" className="border border-border rounded-xl bg-white dark:bg-slate-900/40 px-5 overflow-hidden">
+                  <AccordionTrigger className="font-display font-semibold text-base py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-primary" />
+                      <span>Application & Education Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <InfoItem label="Full Name" value={c.full_name} />
+                      <InfoItem label="Email Address" value={c.email} />
+                      <InfoItem label="Mobile Number" value={c.phone} />
+                      <InfoItem label="Highest Qualification" value={c.highest_qualification} />
+                      <InfoItem label="Branch / Specialization" value={c.branch_specialization} />
+                      <InfoItem label="10th Percentage / CGPA" value={c.tenth_percentage ? `${c.tenth_percentage}%` : "—"} />
+                      <InfoItem label="Intermediate / Diploma Percentage" value={c.intermediate_percentage ? `${c.intermediate_percentage}%` : "—"} />
+                      <InfoItem label="Graduation Percentage / CGPA" value={c.graduation_percentage ? `${c.graduation_percentage}%` : "—"} />
+                      <InfoItem label="Reference Name" value={c.reference_name || "—"} />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* Professional Details Card */}
-              <Card className="p-6 border-border">
-                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  <h3 className="font-display font-semibold text-lg">Professional Details</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <InfoItem label="Experience Status" value={c.experience_type || "Fresher"} />
-                  {c.experience_type === "Experienced" && (
-                    <>
-                      <InfoItem label="Previous Company" value={c.previous_company} />
-                      <InfoItem label="Designation" value={c.designation} />
-                      <InfoItem label="Total Experience" value={c.total_experience} />
-                      <InfoItem label="Current / Previous CTC" value={c.current_ctc} />
-                      <InfoItem label="Notice Period" value={c.notice_period} />
-                    </>
-                  )}
-                </div>
-              </Card>
+                {/* SECTION 3: Experience */}
+                <AccordionItem value="sec-exp" className="border border-border rounded-xl bg-white dark:bg-slate-900/40 px-5 overflow-hidden">
+                  <AccordionTrigger className="font-display font-semibold text-base py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5 text-primary" />
+                      <span>Experience Details</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <InfoItem label="Experience Status" value={c.experience_type || "Fresher"} />
+                      {c.experience_type === "Experienced" && (
+                        <>
+                          <InfoItem label="Previous Company Name" value={c.previous_company} />
+                          <InfoItem label="Designation" value={c.designation} />
+                          <InfoItem label="Total Experience" value={c.total_experience} />
+                          <InfoItem label="Current / Previous CTC" value={c.current_ctc} />
+                          <InfoItem label="Notice Period" value={c.notice_period} />
+                        </>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              {/* Skills section if any */}
-              {c.skills && c.skills.length > 0 && (
-                <Card className="p-6 border-border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="font-display font-semibold">Key Skills</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {c.skills.map(s => <span key={s} className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium">{s}</span>)}
-                  </div>
-                </Card>
-              )}
+                {/* SECTION 4: Recruitment Information */}
+                <AccordionItem value="sec-recruitment" className="border border-border rounded-xl bg-white dark:bg-slate-900/40 px-5 overflow-hidden">
+                  <AccordionTrigger className="font-display font-semibold text-base py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Handshake className="h-5 w-5 text-primary" />
+                      <span>Recruitment Information</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <InfoItem label="Current Status" value={<StatusPill status={c.status} />} />
+                      <InfoItem label="Verification Status" value={c.status === "pending_verification" ? "Pending Verification" : "Verified"} />
+                      <InfoItem label="Assigned Recruiter" value={linkedEmp?.full_name || "—"} />
+                      <InfoItem label="Assigned Partner" value={linkedPartner?.name || "—"} />
+                      <InfoItem label="Payment Status" value={<StatusPill status={c.payment_status} />} />
+                      <InfoItem label="Interview Stage" value={c.interview_timeline?.[c.interview_timeline.length - 1]?.stage || "—"} />
+                      <InfoItem label="Company Assignment" value={linkedCo?.name || "—"} />
+                      <InfoItem label="Batch Assignment" value={c.batch_id || "—"} />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* SECTION 5: Activity Timeline */}
+                <AccordionItem value="sec-activity" className="border border-border rounded-xl bg-white dark:bg-slate-900/40 px-5 overflow-hidden">
+                  <AccordionTrigger className="font-display font-semibold text-base py-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      <span>Activity Timeline</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1">
+                    <div className="space-y-3">
+                      {activities.length === 0 ? <Empty text="No activity yet" /> :
+                        activities.map(a => (
+                          <div key={a.id} className="text-sm border-l-2 border-primary/45 pl-3 py-1 bg-slate-50/50 dark:bg-slate-900/10 rounded-r-md">
+                            <div className="font-semibold text-slate-800 dark:text-slate-100">{a.description}</div>
+                            <div className="text-[10px] text-muted-foreground">{a.actor_name || "System"} · {new Date(a.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+              </Accordion>
             </TabsContent>
 
             <TabsContent value="pipeline" className="mt-6">
