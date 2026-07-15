@@ -108,6 +108,39 @@ async def startup():
         init_storage()
     except Exception as e:
         logger.warning(f"Object storage init failed (uploads will fail): {e}")
+
+    # Validate Cloudinary Configuration on Startup
+    cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    cloudinary_key = os.environ.get("CLOUDINARY_API_KEY")
+    cloudinary_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    cloudinary_url = os.environ.get("CLOUDINARY_URL")
+    
+    if cloudinary_url:
+        logger.info("Cloudinary: CLOUDINARY_URL environment variable detected.")
+        if not (cloudinary_cloud and cloudinary_key and cloudinary_secret):
+            try:
+                if cloudinary_url.startswith("cloudinary://"):
+                    url_part = cloudinary_url.replace("cloudinary://", "")
+                    credentials, cloud_name = url_part.split("@")
+                    api_key, api_secret = credentials.split(":")
+                    if "?" in api_secret:
+                        api_secret = api_secret.split("?")[0]
+                    cloudinary_cloud = cloud_name
+                    cloudinary_key = api_key
+                    cloudinary_secret = api_secret
+                    logger.info("Cloudinary: Parsed credentials from CLOUDINARY_URL successfully.")
+            except Exception as e:
+                logger.error(f"Cloudinary: Error parsing CLOUDINARY_URL on startup: {e}")
+
+    missing_keys = []
+    if not cloudinary_cloud: missing_keys.append("CLOUDINARY_CLOUD_NAME")
+    if not cloudinary_key: missing_keys.append("CLOUDINARY_API_KEY")
+    if not cloudinary_secret: missing_keys.append("CLOUDINARY_API_SECRET")
+
+    if not missing_keys:
+        logger.info("Cloudinary configured successfully")
+    else:
+        logger.warning(f"Cloudinary configuration missing: {', '.join(missing_keys)}")
     # Ensure indexes
     await db.users.create_index("email", unique=True)
     await db.candidates.create_index("email")

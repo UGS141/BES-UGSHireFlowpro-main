@@ -111,13 +111,33 @@ async def process_and_save_upload(
 
     # 3. Storage
     storage_path = None
+    cloudinary_public_id = None
     is_local = False
     
     cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
     cloudinary_key = os.environ.get("CLOUDINARY_API_KEY")
     cloudinary_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    cloudinary_url = os.environ.get("CLOUDINARY_URL")
     
+    if cloudinary_url and not (cloudinary_cloud and cloudinary_key and cloudinary_secret):
+        try:
+            if cloudinary_url.startswith("cloudinary://"):
+                url_part = cloudinary_url.replace("cloudinary://", "")
+                credentials, cloud_name = url_part.split("@")
+                api_key, api_secret = credentials.split(":")
+                if "?" in api_secret:
+                    api_secret = api_secret.split("?")[0]
+                cloudinary_cloud = cloud_name
+                cloudinary_key = api_key
+                cloudinary_secret = api_secret
+        except Exception as e:
+            logger.error(f"Failed to parse CLOUDINARY_URL: {e}")
+
     if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        cloudinary_cloud = cloudinary_cloud.strip()
+        cloudinary_key = cloudinary_key.strip()
+        cloudinary_secret = cloudinary_secret.strip()
+        
         try:
             import cloudinary
             import cloudinary.uploader
@@ -143,7 +163,8 @@ async def process_and_save_upload(
             if not storage_path:
                 raise Exception("Cloudinary secure_url is missing from upload result")
                 
-            logger.info(f"Successfully uploaded to Cloudinary: {storage_path}")
+            cloudinary_public_id = result.get("public_id")
+            logger.info(f"Successfully uploaded to Cloudinary: {storage_path} (public_id: {cloudinary_public_id})")
         except Exception as e:
             logger.error(f"Cloudinary upload failed: {e}")
             if os.environ.get("EMERGENT_LLM_KEY"):
@@ -216,6 +237,7 @@ async def process_and_save_upload(
     # 5. Create FileRef
     file_ref = FileRef(
         storage_path=storage_path,
+        public_id=cloudinary_public_id,
         original_filename=file.filename,
         content_type=file.content_type or "application/octet-stream",
         size=size,
