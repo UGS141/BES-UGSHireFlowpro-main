@@ -172,6 +172,13 @@ class CandidateBase(BaseModel):
     vendor_payment_status: Optional[str] = "Pending"
     vendor_payment_received_date: Optional[str] = None
     last_notified_days: Optional[int] = None
+    # Experience fields
+    experience_type: Optional[str] = "Fresher"
+    previous_company: Optional[str] = None
+    designation: Optional[str] = None
+    total_experience: Optional[str] = None
+    current_ctc: Optional[str] = None
+    notice_period: Optional[str] = None
 
 
 class Candidate(CandidateBase):
@@ -247,6 +254,13 @@ class CandidateUpdate(BaseModel):
     expected_vendor_payment_date: Optional[str] = None
     vendor_payment_status: Optional[str] = None
     vendor_payment_received_date: Optional[str] = None
+    # Experience fields
+    experience_type: Optional[str] = None
+    previous_company: Optional[str] = None
+    designation: Optional[str] = None
+    total_experience: Optional[str] = None
+    current_ctc: Optional[str] = None
+    notice_period: Optional[str] = None
 
 
 # ============ EMPLOYEE ============

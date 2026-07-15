@@ -109,12 +109,16 @@ export default function CandidateDetail() {
             </div>
           )}
           <div className="mt-6 space-y-2.5 text-sm">
-            <Row label="Email" value={c.email} />
-            <Row label="Phone" value={c.phone} />
-            <Row label="Location" value={[c.city, c.state].filter(Boolean).join(", ") || "—"} />
-            <Row label="Experience" value={`${c.total_experience_years || 0} years`} />
-            <Row label="Expected CTC" value={c.expected_salary ? `₹${c.expected_salary.toLocaleString("en-IN")}` : "—"} />
-            <Row label="Notice" value={c.notice_period_days ? `${c.notice_period_days} days` : "—"} />
+            <Row label="Email" value={c.email || "—"} />
+            <Row label="Phone" value={c.phone || "—"} />
+            <Row label="Experience" value={c.experience_type || "Fresher"} />
+            {c.experience_type === "Experienced" && (
+              <>
+                <Row label="Prev. Company" value={c.previous_company || "—"} />
+                <Row label="Notice Period" value={c.notice_period || "—"} />
+              </>
+            )}
+            <Row label="Qualification" value={c.highest_qualification || "—"} />
           </div>
 
           {/* RELATED */}
@@ -184,20 +188,88 @@ export default function CandidateDetail() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
-              <Section title="Education" icon={GraduationCap}>
-                {(c.education || []).length === 0 ? <Empty text="No education added" /> :
-                  c.education.map((e, i) => <div key={i} className="text-sm mb-2"><div className="font-medium">{e.degree}</div><div className="text-muted-foreground">{e.institution} · {e.year || "—"} · {e.percentage || "—"}</div></div>)}
-              </Section>
-              <Section title="Experience" icon={Briefcase}>
-                {(c.experience || []).length === 0 ? <Empty text="No experience added" /> :
-                  c.experience.map((e, i) => <div key={i} className="text-sm mb-2"><div className="font-medium">{e.role} @ {e.company}</div><div className="text-muted-foreground">{e.duration || "—"}</div></div>)}
-              </Section>
-              <Section title="Skills">
-                <div className="flex flex-wrap gap-1.5">
-                  {(c.skills || []).map(s => <span key={s} className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs">{s}</span>)}
-                  {(c.skills || []).length === 0 && <Empty text="No skills added" />}
+              {/* Profile Summary Card */}
+              <Card className="p-6 border-border">
+                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+                  <User className="h-5 w-5 text-primary" />
+                  <h3 className="font-display font-semibold text-lg">Profile Summary</h3>
                 </div>
-              </Section>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InfoItem label="Candidate Name" value={c.full_name} />
+                  <InfoItem label="Candidate ID" value={c.candidate_code} />
+                  <InfoItem label="Status" value={<StatusPill status={c.status} />} />
+                  <InfoItem label="Recruiter" value={linkedEmp?.full_name || "—"} />
+                  <InfoItem label="Partner" value={linkedPartner?.name || "—"} />
+                  <InfoItem label="Payment Status" value={<StatusPill status={c.payment_status} />} />
+                  <InfoItem label="Verification Status" value={c.status === "pending_verification" ? "Pending Verification" : "Verified"} />
+                  <InfoItem 
+                    label="Resume Status" 
+                    value={
+                      c.resume_file_id ? (
+                        <a 
+                          href={`${API_BASE}/files/${c.resume_file_id}/download?auth=${localStorage.getItem("ugs_token")}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-primary hover:underline font-semibold"
+                        >
+                          View Uploaded Resume (PDF)
+                        </a>
+                      ) : "Not Uploaded"
+                    } 
+                  />
+                </div>
+              </Card>
+
+              {/* Personal Details Card */}
+              <Card className="p-6 border-border">
+                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                  <h3 className="font-display font-semibold text-lg">Personal & Education Details</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InfoItem label="Full Name" value={c.full_name} />
+                  <InfoItem label="Email" value={c.email} />
+                  <InfoItem label="Phone" value={c.phone} />
+                  <InfoItem label="Highest Qualification" value={c.highest_qualification} />
+                  <InfoItem label="Branch / Specialization" value={c.branch_specialization} />
+                  <InfoItem label="10th Percentage / CGPA" value={c.tenth_percentage ? `${c.tenth_percentage}%` : "—"} />
+                  <InfoItem label="Intermediate / Diploma %" value={c.intermediate_percentage ? `${c.intermediate_percentage}%` : "—"} />
+                  <InfoItem label="Graduation %" value={c.graduation_percentage ? `${c.graduation_percentage}%` : "—"} />
+                  <InfoItem label="Reference Name" value={c.reference_name || "—"} />
+                </div>
+              </Card>
+
+              {/* Professional Details Card */}
+              <Card className="p-6 border-border">
+                <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                  <h3 className="font-display font-semibold text-lg">Professional Details</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InfoItem label="Experience Status" value={c.experience_type || "Fresher"} />
+                  {c.experience_type === "Experienced" && (
+                    <>
+                      <InfoItem label="Previous Company" value={c.previous_company} />
+                      <InfoItem label="Designation" value={c.designation} />
+                      <InfoItem label="Total Experience" value={c.total_experience} />
+                      <InfoItem label="Current / Previous CTC" value={c.current_ctc} />
+                      <InfoItem label="Notice Period" value={c.notice_period} />
+                    </>
+                  )}
+                </div>
+              </Card>
+
+              {/* Skills section if any */}
+              {c.skills && c.skills.length > 0 && (
+                <Card className="p-6 border-border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="font-display font-semibold">Key Skills</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.skills.map(s => <span key={s} className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium">{s}</span>)}
+                  </div>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="pipeline" className="mt-6">
@@ -230,6 +302,12 @@ const Row = ({ label, value }) => (
   <div className="flex justify-between gap-3">
     <span className="text-xs text-muted-foreground">{label}</span>
     <span className="text-sm font-medium text-right truncate">{value}</span>
+  </div>
+);
+const InfoItem = ({ label, value }) => (
+  <div className="flex flex-col gap-1">
+    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{label}</span>
+    <span className="text-sm font-semibold text-slate-850 dark:text-slate-100">{value !== undefined && value !== null && value !== "" ? value : "—"}</span>
   </div>
 );
 const RelatedLink = ({ icon: Icon, label, text, to }) => (

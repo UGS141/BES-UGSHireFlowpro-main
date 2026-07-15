@@ -99,6 +99,19 @@ async def public_register_full(
     certificates: List[UploadFile] = File(default_factory=list),
     experience_documents: List[UploadFile] = File(default_factory=list),
     supporting_documents: List[UploadFile] = File(default_factory=list),
+    # Qualification and Percentage fields
+    highest_qualification: Optional[str] = Form(None),
+    branch_specialization: Optional[str] = Form(None),
+    tenth_percentage: Optional[float] = Form(None),
+    intermediate_percentage: Optional[float] = Form(None),
+    graduation_percentage: Optional[float] = Form(None),
+    # Fresher vs Experienced details
+    experience_type: Optional[str] = Form("Fresher"),
+    previous_company: Optional[str] = Form(None),
+    designation: Optional[str] = Form(None),
+    total_experience: Optional[str] = Form(None),
+    current_ctc: Optional[str] = Form(None),
+    notice_period: Optional[str] = Form(None),
 ):
     try:
         email = email.lower().strip()
@@ -131,6 +144,17 @@ async def public_register_full(
             emergency_contact={"name": emergency_name, "phone": emergency_phone} if emergency_name else None,
             reference_name=reference_name,
             reference_phone=reference_phone,
+            highest_qualification=highest_qualification,
+            branch_specialization=branch_specialization,
+            tenth_percentage=tenth_percentage,
+            intermediate_percentage=intermediate_percentage,
+            graduation_percentage=graduation_percentage,
+            experience_type=experience_type,
+            previous_company=previous_company,
+            designation=designation,
+            total_experience=total_experience,
+            current_ctc=current_ctc,
+            notice_period=notice_period,
         )
         cand.candidate_code = await next_code("candidates", "UGS-C")
 

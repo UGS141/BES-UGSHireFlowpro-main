@@ -13,6 +13,18 @@ const QUALIFICATIONS = [
   "Intermediate", "Diploma", "B.Tech", "B.E", "BCA", "MCA", "B.Sc", "M.Sc", "MBA", "M.Tech", "Other"
 ];
 
+const NOTICE_PERIODS = [
+  "Immediate", "15 Days", "30 Days", "45 Days", "60 Days", "90 Days"
+];
+
+const EXPERIENCE_OPTIONS = [
+  "0.6 Years", "1 Year", "2 Years", "3 Years", "5 Years"
+];
+
+const CTC_OPTIONS = [
+  "3.5 LPA", "5 LPA", "8 LPA"
+];
+
 export default function Register() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -26,6 +38,12 @@ export default function Register() {
     intermediate_percentage: "",
     graduation_percentage: "",
     reference_name: "",
+    experience_type: "Fresher",
+    previous_company: "",
+    designation: "",
+    total_experience: "",
+    current_ctc: "",
+    notice_period: "",
   });
   const [files, setFiles] = useState({ resume: null });
 
@@ -59,6 +77,12 @@ export default function Register() {
       toast.error("Please fill in all required fields.");
       return;
     }
+    if (form.experience_type === "Experienced") {
+      if (!form.previous_company || !form.designation || !form.total_experience || !form.current_ctc || !form.notice_period) {
+        toast.error("Please fill in all professional details.");
+        return;
+      }
+    }
     if (!files.resume) {
       toast.error("Please upload your resume.");
       return;
@@ -67,7 +91,16 @@ export default function Register() {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => {
+      const payload = { ...form };
+      if (payload.experience_type === "Fresher") {
+        payload.previous_company = "";
+        payload.designation = "";
+        payload.total_experience = "";
+        payload.current_ctc = "";
+        payload.notice_period = "";
+      }
+      
+      Object.entries(payload).forEach(([k, v]) => {
         if (v !== "" && v !== null && v !== undefined) {
           fd.append(k, v);
         }
@@ -173,6 +206,102 @@ export default function Register() {
                   data-testid="reg-branch-specialization" 
                 />
               </F>
+
+              <div className="md:col-span-2">
+                <Label className="text-xs mb-1.5 block">Experience *</Label>
+                <div className="flex gap-6 mt-2">
+                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="experience_type" 
+                      value="Fresher" 
+                      checked={form.experience_type === "Fresher"} 
+                      onChange={(e) => setForm(f => ({ ...f, experience_type: e.target.value }))}
+                      className="h-4 w-4 text-primary focus:ring-primary cursor-pointer"
+                    />
+                    Fresher
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="experience_type" 
+                      value="Experienced" 
+                      checked={form.experience_type === "Experienced"} 
+                      onChange={(e) => setForm(f => ({ ...f, experience_type: e.target.value }))}
+                      className="h-4 w-4 text-primary focus:ring-primary cursor-pointer"
+                    />
+                    Experienced
+                  </label>
+                </div>
+              </div>
+
+              {form.experience_type === "Experienced" && (
+                <>
+                  <F label="Previous Company Name" required>
+                    <Input 
+                      value={form.previous_company} 
+                      onChange={on("previous_company")} 
+                      placeholder="e.g. Acme Corp" 
+                      required 
+                      data-testid="reg-prev-company" 
+                    />
+                  </F>
+                  <F label="Current / Previous Designation" required>
+                    <Input 
+                      value={form.designation} 
+                      onChange={on("designation")} 
+                      placeholder="e.g. Software Engineer" 
+                      required 
+                      data-testid="reg-designation" 
+                    />
+                  </F>
+                  <F label="Total Experience" required>
+                    <Select 
+                      value={form.total_experience} 
+                      onValueChange={(v) => setForm(f => ({ ...f, total_experience: v }))}
+                    >
+                      <SelectTrigger data-testid="reg-total-experience">
+                        <SelectValue placeholder="Select Experience" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPERIENCE_OPTIONS.map(opt => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </F>
+                  <F label="Current / Previous CTC" required>
+                    <Select 
+                      value={form.current_ctc} 
+                      onValueChange={(v) => setForm(f => ({ ...f, current_ctc: v }))}
+                    >
+                      <SelectTrigger data-testid="reg-current-ctc">
+                        <SelectValue placeholder="Select CTC" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CTC_OPTIONS.map(opt => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </F>
+                  <F label="Notice Period" required>
+                    <Select 
+                      value={form.notice_period} 
+                      onValueChange={(v) => setForm(f => ({ ...f, notice_period: v }))}
+                    >
+                      <SelectTrigger data-testid="reg-notice-period">
+                        <SelectValue placeholder="Select Notice Period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NOTICE_PERIODS.map(opt => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </F>
+                </>
+              )}
               
               <F label="10th Percentage / CGPA" required>
                 <Input 

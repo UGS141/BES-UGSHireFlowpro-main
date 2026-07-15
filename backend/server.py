@@ -284,6 +284,19 @@ def compute_vendor_remaining_days(c: dict) -> dict:
     return c
 
 
+def parse_ctc(ctc_str: str) -> float:
+    if not ctc_str:
+        return 0.0
+    try:
+        import re
+        match = re.search(r"([0-9.]+)", ctc_str)
+        if match:
+            return float(match.group(1))
+    except Exception:
+        pass
+    return 0.0
+
+
 # ============ CANDIDATES ============
 @api.get("/candidates")
 async def list_candidates(
@@ -291,6 +304,9 @@ async def list_candidates(
     batch_id: str = "", payment_status: str = "", partner_id: str = "",
     vendor_type: str = "", vendor_payment_status: str = "",
     experience: Optional[float] = None, remaining_days: Optional[int] = None,
+    # Experience filters
+    experience_type: str = "", previous_company: str = "",
+    notice_period: str = "", ctc_range: str = "",
     include_archived: bool = False,
     skip: int = 0, limit: int = 100,
     current: dict = Depends(get_current_user),
@@ -308,6 +324,11 @@ async def list_candidates(
             {"candidate_code": {"$regex": q, "$options": "i"}},
             {"skills": {"$regex": q, "$options": "i"}},
             {"reference_name": {"$regex": q, "$options": "i"}},
+            {"previous_company": {"$regex": q, "$options": "i"}},
+            {"designation": {"$regex": q, "$options": "i"}},
+            {"total_experience": {"$regex": q, "$options": "i"}},
+            {"notice_period": {"$regex": q, "$options": "i"}},
+            {"current_ctc": {"$regex": q, "$options": "i"}},
         ]
     if status: filt["status"] = status
     if employee_id: filt["assigned_employee_id"] = employee_id
@@ -322,12 +343,43 @@ async def list_candidates(
         from datetime import date, timedelta
         max_date = (date.today() + timedelta(days=remaining_days)).strftime("%Y-%m-%d")
         filt["expected_vendor_payment_date"] = {"$lte": max_date, "$ne": None}
+        
+    # Apply experience filters
+    if experience_type:
+        filt["experience_type"] = experience_type
+    if previous_company:
+        filt["previous_company"] = {"$regex": previous_company, "$options": "i"}
+    if notice_period:
+        filt["notice_period"] = notice_period
 
-    cursor = db.candidates.find(filt, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
-    items = await cursor.to_list(limit)
+    if ctc_range:
+        cursor = db.candidates.find(filt, {"_id": 0}).sort("created_at", -1)
+        all_items = await cursor.to_list(1000)
+        
+        filtered_items = []
+        try:
+            min_val, max_val = 0.0, 999.0
+            if ctc_range == "0-3": min_val, max_val = 0.0, 3.0
+            elif ctc_range == "3-6": min_val, max_val = 3.0, 6.0
+            elif ctc_range == "6-10": min_val, max_val = 6.0, 10.0
+            elif ctc_range == "10+": min_val, max_val = 10.0, 999.0
+            
+            for item in all_items:
+                ctc_val = parse_ctc(item.get("current_ctc", ""))
+                if min_val <= ctc_val <= max_val:
+                    filtered_items.append(item)
+        except Exception:
+            filtered_items = all_items
+            
+        total = len(filtered_items)
+        items = filtered_items[skip:skip+limit]
+    else:
+        cursor = db.candidates.find(filt, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
+        items = await cursor.to_list(limit)
+        total = await db.candidates.count_documents(filt)
+
     for item in items:
         compute_vendor_remaining_days(item)
-    total = await db.candidates.count_documents(filt)
     return {"items": items, "total": total}
 
 

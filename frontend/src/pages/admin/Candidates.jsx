@@ -28,11 +28,16 @@ export default function Candidates() {
   const [vendorPaymentStatus, setVendorPaymentStatus] = useState("");
   const [experience, setExperience] = useState("");
   const [remainingDays, setRemainingDays] = useState("");
+  const [experienceType, setExperienceType] = useState("");
+  const [prevCompany, setPrevCompany] = useState("");
+  const [noticePeriod, setNoticePeriod] = useState("");
+  const [ctcRange, setCtcRange] = useState("");
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
       "candidates", q, status, payment, employeeId, partnerId, includeArchived,
-      vendorType, vendorPaymentStatus, experience, remainingDays
+      vendorType, vendorPaymentStatus, experience, remainingDays,
+      experienceType, prevCompany, noticePeriod, ctcRange
     ],
     queryFn: async () => (await api.get("/candidates", { params: {
       q, status, payment_status: payment,
@@ -42,6 +47,10 @@ export default function Candidates() {
       vendor_payment_status: vendorPaymentStatus,
       experience: experience ? parseFloat(experience) : undefined,
       remaining_days: remainingDays ? parseInt(remainingDays) : undefined,
+      experience_type: experienceType,
+      previous_company: prevCompany,
+      notice_period: noticePeriod,
+      ctc_range: ctcRange,
     } })).data,
   });
   const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: async () => (await api.get("/employees")).data });
@@ -57,6 +66,7 @@ export default function Candidates() {
   const clearFilters = () => {
     setQ(""); setStatus(""); setPayment(""); setEmployeeId(""); setPartnerId(""); setIncludeArchived(false);
     setVendorType(""); setVendorPaymentStatus(""); setExperience(""); setRemainingDays("");
+    setExperienceType(""); setPrevCompany(""); setNoticePeriod(""); setCtcRange("");
     setSp({});
   };
 
@@ -188,6 +198,44 @@ export default function Candidates() {
             className="w-36"
             data-testid="candidates-remdays-filter"
           />
+
+          <Select value={experienceType || "all"} onValueChange={(v) => setExperienceType(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-40" data-testid="candidates-experience-type-filter"><SelectValue placeholder="Exp Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All (Fresher/Exp)</SelectItem>
+              <SelectItem value="Fresher">Fresher</SelectItem>
+              <SelectItem value="Experienced">Experienced</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            placeholder="Previous Company"
+            value={prevCompany}
+            onChange={(e) => setPrevCompany(e.target.value)}
+            className="w-40"
+            data-testid="candidates-prev-company-filter"
+          />
+
+          <Select value={noticePeriod || "all"} onValueChange={(v) => setNoticePeriod(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-40" data-testid="candidates-notice-period-filter"><SelectValue placeholder="Notice Period" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Notices</SelectItem>
+              {["Immediate", "15 Days", "30 Days", "45 Days", "60 Days", "90 Days"].map(np => (
+                <SelectItem key={np} value={np}>{np}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={ctcRange || "all"} onValueChange={(v) => setCtcRange(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-40" data-testid="candidates-ctc-range-filter"><SelectValue placeholder="CTC Range" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All CTCs</SelectItem>
+              <SelectItem value="0-3">0-3 LPA</SelectItem>
+              <SelectItem value="3-6">3-6 LPA</SelectItem>
+              <SelectItem value="6-10">6-10 LPA</SelectItem>
+              <SelectItem value="10+">10+ LPA</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant={includeArchived ? "default" : "outline"} size="sm" onClick={() => setIncludeArchived(v => !v)} data-testid="toggle-archived">
             {includeArchived ? "Hide archived" : "Show archived"}
           </Button>
@@ -228,7 +276,7 @@ export default function Candidates() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.email}<br />{c.phone}</td>
                     <td className="px-4 py-3"><StatusPill status={c.status} /></td>
                     <td className="px-4 py-3"><StatusPill status={c.payment_status} /></td>
-                    <td className="px-4 py-3">{c.total_experience_years || 0} yrs</td>
+                    <td className="px-4 py-3">{c.experience_type === "Experienced" ? (c.total_experience || "Experienced") : "Fresher"}</td>
                     <td className="px-4 py-3 text-xs">{partner ? <span className="text-primary">{partner.name}</span> : <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
                   </tr>
