@@ -112,17 +112,87 @@ async def process_and_save_upload(
     # 3. Storage
     storage_path = None
     is_local = False
+    
+    cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    cloudinary_key = os.environ.get("CLOUDINARY_API_KEY")
+    cloudinary_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        try:
+            import cloudinary
+            import cloudinary.uploader
+            
+            cloudinary.config(
+                cloud_name=cloudinary_cloud,
+                api_key=cloudinary_key,
+                api_secret=cloudinary_secret,
+                secure=True
+            )
+            
+            clean_filename = f"{new_id()}"
+            public_id = f"ugs-hireflow/uploads/{owner_id or 'public'}/{clean_filename}"
+            
+            logger.info(f"Uploading file to Cloudinary: {public_id}")
+            result = cloudinary.uploader.upload(
+                data,
+                public_id=public_id,
+                resource_type="auto"
+            )
+            
+            storage_path = result.get("secure_url")
+            if not storage_path:
+                raise Exception("Cloudinary secure_url is missing from upload result")
+                
+            logger.info(f"Successfully uploaded to Cloudinary: {storage_path}")
+        except Exception as e:
+            logger.error(f"Cloudinary upload failed: {e}")
+            if os.environ.get("EMERGENT_LLM_KEY"):
+                try:
+                    logger.info("Attempting fallback to Emergent Object Storage...")
+                    remote_path = f"{APP_NAME}/uploads/{owner_id or 'public'}/{new_id()}.{ext}"
+                    result = put_object(remote_path, data, file.content_type or "application/octet-stream")
+                    storage_path = result["path"]
+                except Exception as ex:
+                    logger.error(f"Emergent Object Storage fallback failed: {ex}")
+                    raise UploadValidationError(
+                        error_code="UPLOAD_FAILED",
+                        message="Cloudinary and fallback remote storage failed.",
+                        details=f"Cloudinary: {e}. Fallback: {ex}"
+                    )
+            else:
+                raise UploadValidationError(
+                    error_code="UPLOAD_FAILED",
+                    message="Cloudinary upload failed.",
+                    details=str(e)
+                )
+    else:
+        # Fall back to Emergent Object Storage if configured
+        if os.environ.get("EMERGENT_LLM_KEY"):
+            try:
+                remote_path = f"{APP_NAME}/uploads/{owner_id or 'public'}/{new_id()}.{ext}"
+                result = put_object(remote_path, data, file.content_type or "application/octet-stream")
+                storage_path = result["path"]
+            except Exception as e:
+                logger.error(f"Emergent Object Storage upload failed: {e}")
+                if os.environ.get("RENDER") or os.environ.get("PORT"):
+                    raise UploadValidationError(
+                        error_code="UPLOAD_FAILED",
+                        message="Remote storage failed.",
+                        details=str(e)
+                    )
+                else:
+                    is_local = True
+        else:
+            if os.environ.get("RENDER") or os.environ.get("PORT"):
+                raise UploadValidationError(
+                    error_code="STORAGE_MISCONFIGURED",
+                    message="Remote storage is not configured.",
+                    details="Neither Cloudinary nor Emergent Object Storage is configured in this environment."
+                )
+            else:
+                is_local = True
 
-    try:
-        remote_path = f"{APP_NAME}/uploads/{owner_id or 'public'}/{new_id()}.{ext}"
-        # Attempt upload to Emergent Object Storage
-        result = put_object(remote_path, data, file.content_type or "application/octet-stream")
-        storage_path = result["path"]
-    except Exception as e:
-        logger.warning(f"Remote storage failed. Falling back to local storage. Error: {e}")
-        is_local = True
-
-    # 4. Fallback local storage
+    # 4. Fallback local storage (only for development/local environment)
     if is_local:
         user_folder = os.path.join(LOCAL_UPLOAD_DIR, owner_id or "public")
         try:
@@ -139,8 +209,8 @@ async def process_and_save_upload(
             logger.error(f"Local storage fallback failed: {le}")
             raise UploadValidationError(
                 error_code="UPLOAD_FAILED",
-                message="Unable to upload resume." if label == "resume" else "Unable to upload file.",
-                details="Object Storage connection failed and local storage fallback failed."
+                message="Unable to upload file locally.",
+                details=str(le)
             )
 
     # 5. Create FileRef

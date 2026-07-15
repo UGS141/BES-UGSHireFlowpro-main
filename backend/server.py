@@ -827,6 +827,16 @@ async def download_file(fid: str, auth: str = Query(None),
         with open(full_path, "rb") as f:
             data = f.read()
         ct = rec.get("content_type") or "application/octet-stream"
+    elif rec.get("storage_path", "").startswith("http://") or rec.get("storage_path", "").startswith("https://"):
+        import requests
+        try:
+            resp = requests.get(rec["storage_path"], timeout=30)
+            resp.raise_for_status()
+            data = resp.content
+            ct = rec.get("content_type") or resp.headers.get("Content-Type", "application/octet-stream")
+        except Exception as e:
+            logger.error(f"Failed to fetch file from Cloudinary URL {rec['storage_path']}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch file from remote persistent storage")
     else:
         data, ct = get_object(rec["storage_path"])
         
