@@ -113,6 +113,7 @@ async def process_and_save_upload(
     storage_path = None
     cloudinary_public_id = None
     cloudinary_resource_type = None
+    cloudinary_delivery_type = "upload"
     is_local = False
     
     cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
@@ -162,11 +163,12 @@ async def process_and_save_upload(
             # PDFs are uploaded as 'image' to bypass Cloudinary's raw file delivery restrictions on free/untrusted accounts
             res_type = "image" if ext == "pdf" else "auto"
             
-            logger.info(f"Uploading file to Cloudinary: {public_id} with resource_type={res_type}")
+            logger.info(f"Uploading file to Cloudinary: {public_id} with resource_type={res_type} and type=authenticated")
             result = cloudinary.uploader.upload(
                 file_stream,
                 public_id=public_id,
-                resource_type=res_type
+                resource_type=res_type,
+                type="authenticated"
             )
             
             storage_path = result.get("secure_url")
@@ -175,7 +177,8 @@ async def process_and_save_upload(
                 
             cloudinary_public_id = result.get("public_id")
             cloudinary_resource_type = result.get("resource_type")
-            logger.info(f"Successfully uploaded to Cloudinary: {storage_path} (public_id: {cloudinary_public_id}, resource_type: {cloudinary_resource_type})")
+            cloudinary_delivery_type = result.get("type") or "authenticated"
+            logger.info(f"Successfully uploaded to Cloudinary: {storage_path} (public_id: {cloudinary_public_id}, resource_type: {cloudinary_resource_type}, type: {cloudinary_delivery_type})")
         except Exception as e:
             logger.error(f"Cloudinary upload failed: {e}")
             if os.environ.get("EMERGENT_LLM_KEY"):
@@ -250,6 +253,7 @@ async def process_and_save_upload(
         storage_path=storage_path,
         public_id=cloudinary_public_id,
         resource_type=cloudinary_resource_type,
+        delivery_type=cloudinary_delivery_type,
         original_filename=file.filename,
         content_type=file.content_type or "application/octet-stream",
         size=size,

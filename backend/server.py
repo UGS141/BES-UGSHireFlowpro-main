@@ -919,29 +919,77 @@ async def download_file(fid: str, auth: str = Query(None),
 
     if rec.get("storage_path", "").startswith("http://") or rec.get("storage_path", "").startswith("https://"):
         import requests
+        
+        source_url = rec["storage_path"]
+        p_id = rec.get("public_id")
+        if p_id:
+            try:
+                import cloudinary
+                import cloudinary.utils
+                
+                cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
+                cloudinary_key = os.environ.get("CLOUDINARY_API_KEY")
+                cloudinary_secret = os.environ.get("CLOUDINARY_API_SECRET")
+                cloudinary_url = os.environ.get("CLOUDINARY_URL")
+                
+                if cloudinary_url and not (cloudinary_cloud and cloudinary_key and cloudinary_secret):
+                    if cloudinary_url.startswith("cloudinary://"):
+                        url_part = cloudinary_url.replace("cloudinary://", "")
+                        credentials, cloud_name = url_part.split("@")
+                        api_key, api_secret = credentials.split(":")
+                        if "?" in api_secret:
+                            api_secret = api_secret.split("?")[0]
+                        cloudinary_cloud = cloud_name
+                        cloudinary_key = api_key
+                        cloudinary_secret = api_secret
+                
+                if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+                    cloudinary.config(
+                        cloud_name=cloudinary_cloud.strip(),
+                        api_key=cloudinary_key.strip(),
+                        api_secret=cloudinary_secret.strip(),
+                        secure=True
+                    )
+                    res_type = rec.get("resource_type") or "image"
+                    deliv_type = rec.get("delivery_type") or "upload"
+                    
+                    signed_url, _ = cloudinary.utils.cloudinary_url(
+                        p_id,
+                        resource_type=res_type,
+                        type=deliv_type,
+                        sign_url=True
+                    )
+                    source_url = signed_url
+                    logger.info(f"Generated signed URL for delivery: {source_url}")
+            except Exception as sign_err:
+                logger.warning(f"Failed to generate signed URL: {sign_err}")
+                
         try:
-            resp = requests.get(rec["storage_path"], timeout=30)
+            resp = requests.get(source_url, timeout=30)
             if resp.status_code == 404:
-                logger.error(f"Cloudinary returned 404 Not Found for {rec['storage_path']}")
+                logger.error(f"Cloudinary returned 404 Not Found for {source_url}")
                 raise HTTPException(status_code=404, detail=f"File not found on remote storage: {p_id}")
             elif resp.status_code == 403:
-                logger.error(f"Cloudinary returned 403 Forbidden for {rec['storage_path']}")
+                logger.error(f"Cloudinary returned 403 Forbidden for {source_url}")
                 raise HTTPException(status_code=403, detail=f"Access denied to remote storage: {p_id}")
+            elif resp.status_code == 401:
+                logger.error(f"Cloudinary returned 401 Unauthorized for {source_url}")
+                raise HTTPException(status_code=401, detail=f"Access unauthorized to remote storage: {p_id}")
             resp.raise_for_status()
             data = resp.content
             ct = rec.get("content_type") or resp.headers.get("Content-Type", "application/octet-stream")
         except HTTPException:
             raise
         except requests.exceptions.Timeout as te:
-            logger.error(f"Cloudinary fetch timed out for {rec['storage_path']}: {te}")
+            logger.error(f"Cloudinary fetch timed out for {source_url}: {te}")
             raise HTTPException(status_code=504, detail="Timeout while fetching file from remote storage")
         except requests.exceptions.RequestException as re:
             status_code = getattr(re.response, 'status_code', 500) if re.response is not None else 500
             error_msg = f"HTTP {status_code} error from remote storage"
-            logger.error(f"Cloudinary request error for {rec['storage_path']}: {re}")
+            logger.error(f"Cloudinary request error for {source_url}: {re}")
             raise HTTPException(status_code=status_code, detail=f"Remote storage communication error: {error_msg}")
         except Exception as e:
-            logger.error(f"Failed to fetch file from Cloudinary URL {rec['storage_path']}: {e}")
+            logger.error(f"Failed to fetch file from Cloudinary URL {source_url}: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to fetch file from remote persistent storage: {str(e)}")
     elif rec.get("storage_path", "").startswith("local://"):
         relative_path = rec["storage_path"].replace("local://", "")

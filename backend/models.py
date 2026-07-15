@@ -384,6 +384,7 @@ class FileRef(BaseModel):
     storage_path: str
     public_id: Optional[str] = None
     resource_type: Optional[str] = None
+    delivery_type: Optional[str] = "upload"
     original_filename: str
     content_type: str
     size: int
