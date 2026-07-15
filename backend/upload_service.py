@@ -150,7 +150,13 @@ async def process_and_save_upload(
                 secure=True
             )
             
+            import io
+            file_stream = io.BytesIO(data)
+            file_stream.name = file.filename or f"file.{ext}"
+
             clean_filename = f"{new_id()}"
+            if ext:
+                clean_filename = f"{clean_filename}.{ext}"
             public_id = f"ugs-hireflow/uploads/{owner_id or 'public'}/{clean_filename}"
             
             # PDFs must always use resource_type="raw"
@@ -158,7 +164,7 @@ async def process_and_save_upload(
             
             logger.info(f"Uploading file to Cloudinary: {public_id} with resource_type={res_type}")
             result = cloudinary.uploader.upload(
-                data,
+                file_stream,
                 public_id=public_id,
                 resource_type=res_type
             )
