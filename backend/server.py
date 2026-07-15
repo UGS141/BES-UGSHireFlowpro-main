@@ -921,12 +921,28 @@ async def download_file(fid: str, auth: str = Query(None),
         import requests
         try:
             resp = requests.get(rec["storage_path"], timeout=30)
+            if resp.status_code == 404:
+                logger.error(f"Cloudinary returned 404 Not Found for {rec['storage_path']}")
+                raise HTTPException(status_code=404, detail=f"File not found on remote storage: {p_id}")
+            elif resp.status_code == 403:
+                logger.error(f"Cloudinary returned 403 Forbidden for {rec['storage_path']}")
+                raise HTTPException(status_code=403, detail=f"Access denied to remote storage: {p_id}")
             resp.raise_for_status()
             data = resp.content
             ct = rec.get("content_type") or resp.headers.get("Content-Type", "application/octet-stream")
+        except HTTPException:
+            raise
+        except requests.exceptions.Timeout as te:
+            logger.error(f"Cloudinary fetch timed out for {rec['storage_path']}: {te}")
+            raise HTTPException(status_code=504, detail="Timeout while fetching file from remote storage")
+        except requests.exceptions.RequestException as re:
+            status_code = getattr(re.response, 'status_code', 500) if re.response is not None else 500
+            error_msg = f"HTTP {status_code} error from remote storage"
+            logger.error(f"Cloudinary request error for {rec['storage_path']}: {re}")
+            raise HTTPException(status_code=status_code, detail=f"Remote storage communication error: {error_msg}")
         except Exception as e:
             logger.error(f"Failed to fetch file from Cloudinary URL {rec['storage_path']}: {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch file from remote persistent storage")
+            raise HTTPException(status_code=500, detail=f"Failed to fetch file from remote persistent storage: {str(e)}")
     elif rec.get("storage_path", "").startswith("local://"):
         relative_path = rec["storage_path"].replace("local://", "")
         backend_dir = os.path.dirname(os.path.abspath(__file__))
