@@ -261,6 +261,13 @@ async def process_and_save_upload(
         await db.files.insert_one(file_ref.model_dump())
     except Exception as db_err:
         logger.error(f"FileRef DB insert failed: {db_err}")
+        if cloudinary_public_id:
+            try:
+                import cloudinary.uploader
+                cloudinary.uploader.destroy(cloudinary_public_id, resource_type=cloudinary_resource_type)
+                logger.info(f"Rolled back Cloudinary asset {cloudinary_public_id} due to DB insert failure")
+            except Exception as roll_err:
+                logger.error(f"Orphaned asset cleanup failed: {roll_err}")
         raise UploadValidationError(
             error_code="DATABASE_ERROR",
             message="File upload database sync failed.",
@@ -289,6 +296,20 @@ async def process_and_save_upload(
                 )
         except Exception as cand_err:
             logger.error(f"Candidate file link update failed: {cand_err}")
+            # Roll back files collection record
+            try:
+                await db.files.delete_one({"id": file_ref.id})
+                logger.info(f"Rolled back FileRef doc {file_ref.id} due to candidate update failure")
+            except Exception as doc_roll_err:
+                logger.error(f"Failed to delete orphaned FileRef doc: {doc_roll_err}")
+            # Roll back Cloudinary asset
+            if cloudinary_public_id:
+                try:
+                    import cloudinary.uploader
+                    cloudinary.uploader.destroy(cloudinary_public_id, resource_type=cloudinary_resource_type)
+                    logger.info(f"Rolled back Cloudinary asset {cloudinary_public_id} due to candidate update failure")
+                except Exception as roll_err:
+                    logger.error(f"Orphaned asset cleanup failed: {roll_err}")
             raise UploadValidationError(
                 error_code="DATABASE_ERROR",
                 message="Failed to link uploaded file to candidate record.",
