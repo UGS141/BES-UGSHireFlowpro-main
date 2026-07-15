@@ -953,14 +953,23 @@ async def download_file(fid: str, auth: str = Query(None),
                     res_type = rec.get("resource_type") or "image"
                     deliv_type = rec.get("delivery_type") or "upload"
                     
-                    signed_url, _ = cloudinary.utils.cloudinary_url(
+                    ext = ""
+                    orig_name = rec.get("original_filename") or ""
+                    if "." in orig_name:
+                        ext = orig_name.split(".")[-1].lower()
+                        
+                    fmt = ""
+                    if res_type != "raw":
+                        fmt = ext
+                        
+                    signed_url = cloudinary.utils.private_download_url(
                         p_id,
+                        fmt,
                         resource_type=res_type,
-                        type=deliv_type,
-                        sign_url=True
+                        type=deliv_type
                     )
                     source_url = signed_url
-                    logger.info(f"Generated signed URL for delivery: {source_url}")
+                    logger.info(f"Generated signed private download URL: {source_url}")
             except Exception as sign_err:
                 logger.warning(f"Failed to generate signed URL: {sign_err}")
                 
