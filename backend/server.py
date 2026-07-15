@@ -851,6 +851,17 @@ async def download_file(fid: str, auth: str = Query(None),
     rec = await db.files.find_one({"id": fid, "is_deleted": False})
     if not rec: raise HTTPException(404, "File not found")
     
+    # Logging before serving
+    p_id = rec.get("public_id")
+    s_url = rec.get("storage_path")
+    r_type = rec.get("resource_type")
+    logger.info(f"Serving file - public_id: {p_id}, secure_url: {s_url}, resource_type: {r_type}")
+
+    if rec.get("storage_path", "").startswith("http://") or rec.get("storage_path", "").startswith("https://"):
+        from fastapi.responses import RedirectResponse
+        logger.info(f"Redirecting directly to Cloudinary storage: {s_url}")
+        return RedirectResponse(url=s_url)
+
     if rec.get("storage_path", "").startswith("local://"):
         relative_path = rec["storage_path"].replace("local://", "")
         backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -860,16 +871,6 @@ async def download_file(fid: str, auth: str = Query(None),
         with open(full_path, "rb") as f:
             data = f.read()
         ct = rec.get("content_type") or "application/octet-stream"
-    elif rec.get("storage_path", "").startswith("http://") or rec.get("storage_path", "").startswith("https://"):
-        import requests
-        try:
-            resp = requests.get(rec["storage_path"], timeout=30)
-            resp.raise_for_status()
-            data = resp.content
-            ct = rec.get("content_type") or resp.headers.get("Content-Type", "application/octet-stream")
-        except Exception as e:
-            logger.error(f"Failed to fetch file from Cloudinary URL {rec['storage_path']}: {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch file from remote persistent storage")
     else:
         data, ct = get_object(rec["storage_path"])
         

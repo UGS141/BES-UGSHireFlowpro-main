@@ -369,6 +369,7 @@ class FileRef(BaseModel):
     id: str = Field(default_factory=new_id)
     storage_path: str
     public_id: Optional[str] = None
+    resource_type: Optional[str] = None
     original_filename: str
     content_type: str
     size: int

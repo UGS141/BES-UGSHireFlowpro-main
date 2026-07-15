@@ -112,6 +112,7 @@ async def process_and_save_upload(
     # 3. Storage
     storage_path = None
     cloudinary_public_id = None
+    cloudinary_resource_type = None
     is_local = False
     
     cloudinary_cloud = os.environ.get("CLOUDINARY_CLOUD_NAME")
@@ -152,11 +153,14 @@ async def process_and_save_upload(
             clean_filename = f"{new_id()}"
             public_id = f"ugs-hireflow/uploads/{owner_id or 'public'}/{clean_filename}"
             
-            logger.info(f"Uploading file to Cloudinary: {public_id}")
+            # PDFs must always use resource_type="raw"
+            res_type = "raw" if ext == "pdf" else "auto"
+            
+            logger.info(f"Uploading file to Cloudinary: {public_id} with resource_type={res_type}")
             result = cloudinary.uploader.upload(
                 data,
                 public_id=public_id,
-                resource_type="auto"
+                resource_type=res_type
             )
             
             storage_path = result.get("secure_url")
@@ -164,7 +168,8 @@ async def process_and_save_upload(
                 raise Exception("Cloudinary secure_url is missing from upload result")
                 
             cloudinary_public_id = result.get("public_id")
-            logger.info(f"Successfully uploaded to Cloudinary: {storage_path} (public_id: {cloudinary_public_id})")
+            cloudinary_resource_type = result.get("resource_type")
+            logger.info(f"Successfully uploaded to Cloudinary: {storage_path} (public_id: {cloudinary_public_id}, resource_type: {cloudinary_resource_type})")
         except Exception as e:
             logger.error(f"Cloudinary upload failed: {e}")
             if os.environ.get("EMERGENT_LLM_KEY"):
@@ -238,6 +243,7 @@ async def process_and_save_upload(
     file_ref = FileRef(
         storage_path=storage_path,
         public_id=cloudinary_public_id,
+        resource_type=cloudinary_resource_type,
         original_filename=file.filename,
         content_type=file.content_type or "application/octet-stream",
         size=size,
