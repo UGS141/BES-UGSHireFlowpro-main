@@ -4,6 +4,7 @@ import { Menu, X, ArrowRight, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { useTheme } from "@/context/ThemeContext";
+import { motion } from "framer-motion";
 
 export function PublicLayout() {
   const [open, setOpen] = React.useState(false);
@@ -23,7 +24,15 @@ export function PublicLayout() {
       <header className="sticky top-0 z-40 glass border-b border-border/60">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5" data-testid="brand-logo">
-            <img src="/bes_logo.png" alt="BES" className="h-10 w-10 object-contain" />
+            <motion.img 
+              src="/bes_logo.png" 
+              alt="BES" 
+              className="h-10 w-10 object-contain dark:invert-0 filter invert p-0.5 bg-slate-950/10 dark:bg-transparent rounded-lg"
+              initial={{ rotate: -15, scale: 0.8, opacity: 0 }}
+              animate={{ rotate: 0, scale: 1, opacity: 1 }}
+              whileHover={{ rotate: 15, scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 350, damping: 15 }}
+            />
             <div className="leading-none">
               <div className="font-display font-bold text-lg tracking-tight bg-gradient-to-r from-[#4A5FBF] via-[#5B8CB5] to-[#3EB489] bg-clip-text text-transparent">
                 BES Info Tech

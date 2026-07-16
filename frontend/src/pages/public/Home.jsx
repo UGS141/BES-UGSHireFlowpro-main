@@ -216,6 +216,44 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ================ MAIN OFFICE BANNER ================ */}
+      <section className="py-20 bg-slate-50 dark:bg-slate-900/10 border-y border-border/50">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-6">
+              <Reveal>
+                <div className="overline text-primary">Our Legacy & Core Values</div>
+                <h2 className="mt-3 font-display text-4xl lg:text-5xl font-bold tracking-tighter">
+                  Shaping Careers through Trust & Education.
+                </h2>
+                <p className="mt-5 text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Established with the vision to bridge the gap between academic education and corporate requirements, <strong>BES Info Tech</strong> (part of BES Education Society, Nellore) has stood as a beacon of guidance for over 15 years.
+                </p>
+                <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Our state-of-the-art career development center operates with dedicated career counselors, recruitment managers, and academic advisors to ensure every student and professional receives the highest quality placement advice.
+                </p>
+              </Reveal>
+            </div>
+            <div className="lg:col-span-6">
+              <Reveal delay={0.15}>
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 group bg-slate-900">
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent z-10" />
+                  <img 
+                    src="/bes_banner.jpg" 
+                    alt="BES Nellore Education Society Office" 
+                    className="w-full object-cover aspect-[4/3] group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
+                    <div className="text-xs overline text-emerald-400 font-semibold tracking-wider">Career Hub</div>
+                    <div className="text-lg font-display font-semibold mt-1">BES Career Counseling & Placements Center</div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ================ BANNERS & NEWSLETTERS ================ */}
       {banners.length > 0 && (
         <section className="py-16 bg-slate-50/50 dark:bg-slate-900/10 border-y border-border/50">
