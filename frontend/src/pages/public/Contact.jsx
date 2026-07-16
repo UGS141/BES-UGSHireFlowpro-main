@@ -40,7 +40,7 @@ export default function Contact() {
           <p className="mt-4 text-slate-600 dark:text-slate-300">Reach us via email or phone, or drop a message on the right.</p>
           <div className="mt-8 space-y-4">
             {[
-              { i: Mail, t: "hello@bes-consultancy.com" },
+              { i: Mail, t: "contact@besinfotech.com" },
               { i: Phone, t: "+91 90000 00000" },
               { i: MapPin, t: "Hyderabad, India" },
             ].map((c, k) => (

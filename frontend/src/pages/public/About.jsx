@@ -8,11 +8,11 @@ import { Rocket, Heart, Users2 } from "lucide-react";
 export default function About() {
   React.useEffect(() => {
     // Dynamic SEO
-    document.title = "About Us | BES Consultancy - Trusted Placement Services";
+    document.title = "About Us | BES Info Tech - Trusted Placement Services";
     
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute("content", "Learn about BES Consultancy, India's trusted placement and recruitment partner since 2010. We connect freshers and experienced candidates with leading companies.");
+      metaDesc.setAttribute("content", "Learn about BES Info Tech, India's trusted placement and recruitment partner since 2010. We connect freshers and experienced candidates with leading companies.");
     }
     
     // Schema Structured Data
@@ -27,14 +27,14 @@ export default function About() {
     script.innerHTML = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "AboutPage",
-      "name": "About BES Consultancy",
-      "description": "Learn about BES Consultancy, India's trusted placement and recruitment partner since 2010.",
+      "name": "About BES Info Tech",
+      "description": "Learn about BES Info Tech, India's trusted placement and recruitment partner since 2010.",
       "publisher": {
         "@type": "Organization",
-        "name": "BES Consultancy",
+        "name": "BES Info Tech",
         "logo": {
           "@type": "ImageObject",
-          "url": window.location.origin + "/logo.png"
+          "url": window.location.origin + "/bes_logo.png"
         }
       }
     });
@@ -60,7 +60,7 @@ export default function About() {
         </Reveal>
         <Reveal delay={0.1}>
           <p className="mt-6 text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-            BES Consultancy has been helping job seekers and employers connect since 2010. Having built a strong reputation as a trusted recruitment partner, we provide comprehensive placement services across multiple domains including IT, Non-IT, and Campus Placements. Our focus is on bridging the gap between industry requirements and talented professionals.
+            BES Info Tech has been helping job seekers and employers connect since 2010. Having built a strong reputation as a trusted recruitment partner, we provide comprehensive placement services across multiple domains including IT, Non-IT, and Campus Placements. Our focus is on bridging the gap between industry requirements and talented professionals.
           </p>
         </Reveal>
         <Reveal delay={0.2}>

@@ -45,7 +45,7 @@ const BENEFITS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Rakesh Menon", role: "Managing Partner, TechHire Consulting", stars: 5, quote: "We moved 15 years of Excel to BES Consultancy in a weekend. Our team stopped fighting spreadsheets and started closing placements." },
+  { name: "Rakesh Menon", role: "Managing Partner, TechHire Consulting", stars: 5, quote: "We moved 15 years of Excel to BES Info Tech in a weekend. Our team stopped fighting spreadsheets and started closing placements." },
   { name: "Sneha Patel", role: "Head of Recruitment, ScaleForce Talent", stars: 5, quote: "The pipeline view alone paid for the platform. We can see every candidate, every stage, in real time." },
   { name: "Vivek Rao", role: "Founder, BluePeak Placements", stars: 5, quote: "Partner tracking transformed our referral business. We now pay commissions on time and partners send us 3× the candidates." },
 ];
@@ -127,7 +127,7 @@ export default function Home() {
           <div className="lg:col-span-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" /> Placement Consultancy · Trusted since 2010
+              <Sparkles className="h-3.5 w-3.5" /> Placement Partner · Trusted since 2010
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
@@ -158,7 +158,7 @@ export default function Home() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ duration: 0.7, delay: 0.5 }}
               className="mt-8 flex flex-wrap gap-6 text-sm text-slate-600 dark:text-slate-400">
-              {["15+ Years of Excellence", "Trusted Placement Consultancy", "1000+ Successful Placements"].map(x => (
+              {["15+ Years of Excellence", "Trusted Placement Partner", "1000+ Successful Placements"].map(x => (
                 <div key={x} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" />{x}</div>
               ))}
             </motion.div>

@@ -5,7 +5,7 @@ import { AmbientBackground } from "@/components/animated/AmbientBackground";
 import { Reveal, Stagger, staggerItem } from "@/components/animated/Reveal";
 
 const services = [
-  { icon: Rocket, title: "IT Consultancy", desc: "Recruitment for tech, product, and engineering roles across India.", tone: "from-blue-500/15 to-blue-500/5", ic: "text-blue-600" },
+  { icon: Rocket, title: "IT Recruitment", desc: "Recruitment for tech, product, and engineering roles across India.", tone: "from-blue-500/15 to-blue-500/5", ic: "text-blue-600" },
   { icon: Users2, title: "Non-IT Placement", desc: "Sales, operations, finance, and HR — end-to-end recruitment lifecycle.", tone: "from-emerald-500/15 to-emerald-500/5", ic: "text-emerald-600" },
   { icon: GraduationCap, title: "Training Batches", desc: "Full-stack, DevOps, and cloud training batches. Hire-ready professionals in 8 weeks.", tone: "from-purple-500/15 to-purple-500/5", ic: "text-purple-600" },
   { icon: Building2, title: "Corporate Hiring", desc: "Volume hiring campaigns with dedicated recruiter pods for enterprises.", tone: "from-orange-500/15 to-orange-500/5", ic: "text-orange-600" },
@@ -13,11 +13,11 @@ const services = [
 
 export default function Services() {
   React.useEffect(() => {
-    document.title = "Our Services | BES Consultancy - IT & Non-IT Placements";
+    document.title = "Our Services | BES Info Tech - IT & Non-IT Placements";
     
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute("content", "Explore recruitment and placement services by BES Consultancy. We offer IT consultancy, Non-IT placements, training batches, and corporate volume hiring.");
+      metaDesc.setAttribute("content", "Explore recruitment and placement services by BES Info Tech. We offer IT recruitment, Non-IT placements, training batches, and corporate volume hiring.");
     }
     
     const scriptId = "seo-schema-services";
@@ -34,7 +34,7 @@ export default function Services() {
       "serviceType": "Recruitment & Placement Services",
       "provider": {
         "@type": "Organization",
-        "name": "BES Consultancy"
+        "name": "BES Info Tech"
       },
       "areaServed": "India",
       "hasOfferCatalog": {
@@ -45,7 +45,7 @@ export default function Services() {
             "@type": "Offer",
             "itemOffered": {
               "@type": "Service",
-              "name": "IT Consultancy"
+              "name": "IT Recruitment"
             }
           },
           {
@@ -86,7 +86,7 @@ export default function Services() {
         <Reveal>
           <div className="overline text-primary">Our Services</div>
           <h1 className="mt-3 font-display text-5xl lg:text-6xl font-bold tracking-tighter">Recruitment done right.</h1>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl">From candidate sourcing to placement, BES Consultancy powers every stage.</p>
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl">From candidate sourcing to placement, BES Info Tech powers every stage.</p>
         </Reveal>
         <Stagger className="mt-14 grid md:grid-cols-2 gap-5">
           {services.map(s => (

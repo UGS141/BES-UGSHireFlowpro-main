@@ -135,7 +135,7 @@ export default function Register() {
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Application Submitted!</h1>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            Thank you for registering with BES Consultancy. Your profile has been created successfully and is now awaiting verification.
+            Thank you for registering with BES Info Tech. Your profile has been created successfully and is now awaiting verification.
           </p>
           <div className="w-full rounded-xl bg-slate-50 dark:bg-slate-900/60 p-4 border border-border text-left text-xs space-y-2 mb-6">
             <div className="flex justify-between"><strong>Name:</strong> <span>{form.full_name}</span></div>
@@ -154,15 +154,15 @@ export default function Register() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
       <div className="flex items-center gap-3 mb-2 justify-center">
-        <img src="/favicon.png" alt="UGS" className="h-8 w-8 object-contain" />
+        <img src="/bes_logo.png" alt="BES" className="h-8 w-8 object-contain dark:invert-0 filter invert p-0.5 bg-slate-950/10 dark:bg-transparent rounded-lg" />
         <div className="font-display font-bold text-lg tracking-tight bg-gradient-to-r from-[#4A5FBF] via-[#5B8CB5] to-[#3EB489] bg-clip-text text-transparent">
-          UGS HireFlow
+          BES Info Tech
         </div>
       </div>
       
       <div className="text-center mb-8">
         <h1 className="font-display text-3xl font-bold tracking-tight">Submit Application</h1>
-        <p className="text-sm text-slate-500 mt-1.5">Join the BES Consultancy talent network today.</p>
+        <p className="text-sm text-slate-500 mt-1.5">Join the BES Info Tech talent network today.</p>
       </div>
 
       <Card className="p-6 md:p-8 soft-shadow border-border">
