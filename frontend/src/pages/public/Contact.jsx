@@ -39,17 +39,39 @@ export default function Contact() {
           <h1 className="mt-3 font-display text-5xl lg:text-6xl font-bold tracking-tighter">Let&apos;s talk hiring.</h1>
           <p className="mt-4 text-slate-600 dark:text-slate-300">Reach us via email or phone, or drop a message on the right.</p>
           <div className="mt-8 space-y-4">
-            {[
-              { i: Mail, t: "contact@besinfotech.com" },
-              { i: Phone, t: "+91 90000 00000" },
-              { i: MapPin, t: "Hyderabad, India" },
-            ].map((c, k) => (
-              <motion.div key={k} whileHover={{ x: 4 }}
-                className="flex items-center gap-3 rounded-xl border border-border p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center"><c.i className="h-4 w-4" /></div>
-                <span className="text-sm font-medium">{c.t}</span>
-              </motion.div>
-            ))}
+            <motion.div whileHover={{ x: 4 }}
+              className="flex items-center gap-3 rounded-xl border border-border p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center"><Mail className="h-4 w-4" /></div>
+              <div className="flex flex-col">
+                <a href="mailto:srikar@besinfotech.com" className="text-sm font-medium hover:underline">srikar@besinfotech.com</a>
+                <a href="mailto:besinfotech96699@gmail.com" className="text-sm text-muted-foreground hover:underline">besinfotech96699@gmail.com</a>
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ x: 4 }}
+              className="flex items-center gap-3 rounded-xl border border-border p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center"><Phone className="h-4 w-4" /></div>
+              <div className="flex flex-col">
+                <a href="tel:+919949954313" className="text-sm font-medium hover:underline">+91 99499 54313</a>
+                <a href="tel:+919949523474" className="text-sm text-muted-foreground hover:underline">+91 99495 23474</a>
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ x: 4 }}
+              className="flex items-start gap-3 rounded-xl border border-border p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0 mt-0.5"><MapPin className="h-4 w-4" /></div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">Nellore, Hyderabad, Bangalore, Chennai</span>
+                <a 
+                  href="https://maps.app.goo.gl/m8RvDNSP8heBMqPF7" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-xs text-primary hover:underline mt-1 font-medium"
+                >
+                  View on Google Maps
+                </a>
+              </div>
+            </motion.div>
           </div>
         </Reveal>
         <Reveal delay={0.15}>
