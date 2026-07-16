@@ -58,6 +58,30 @@ const FAQ = [
   { q: "How quickly can we onboard our team?", a: "Most recruiters are productive on day one. The interface is designed so a new team member can learn the system within a single working day." },
 ];
 
+function LazyImage({ src, alt, className }) {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <div className="relative w-full h-full">
+      {!loaded && (
+        <div className="absolute inset-0 bg-slate-100 dark:bg-slate-900 grid place-items-center z-10">
+          <img 
+            src="/bes_logo.png" 
+            alt="Loading..." 
+            className="h-10 w-10 object-contain dark:invert-0 filter invert animate-pulse opacity-40"
+          />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={`${className || ""} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
+}
+
 export default function Home() {
   const [banners, setBanners] = React.useState([]);
   React.useEffect(() => {
@@ -238,7 +262,7 @@ export default function Home() {
               <Reveal delay={0.15}>
                 <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-border/50 group bg-slate-900">
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent z-10" />
-                  <img 
+                  <LazyImage 
                     src="/bes_banner.jpg" 
                     alt="BES Nellore Education Society Office" 
                     className="w-full object-cover aspect-[4/3] group-hover:scale-105 transition-transform duration-700"
@@ -269,7 +293,7 @@ export default function Home() {
                 <Reveal key={b.id}>
                   <div className="rounded-2xl border border-border bg-white dark:bg-slate-950 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
                     <div className="aspect-[16/9] w-full bg-muted relative overflow-hidden">
-                      <img 
+                      <LazyImage 
                         src={`${process.env.REACT_APP_BACKEND_URL || ""}/api/files/${b.file_id}/download`} 
                         alt={b.title || "Banner"}
                         className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
