@@ -51,7 +51,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: "How different is BES Consultancy from other agencies?", a: "BES Consultancy is a premier recruitment consultancy with a purpose-built system. Every module — candidates, pipeline, partners, batches, payments — is optimized for real placement workflows, not generic sales." },
+  { q: "How different is BES Info Tech from other agencies?", a: "BES Info Tech is a premier recruitment consultancy with a purpose-built system. Every module — candidates, pipeline, partners, batches, payments — is optimized for real placement workflows, not generic sales." },
   { q: "Can we migrate our existing Excel data?", a: "Yes. Upload .xlsx or .csv files with a click. We preview the data, flag duplicates, and give you a full import summary." },
   { q: "How is data secured?", a: "JWT authentication, role-based access control (Admin / Recruiter / Candidate), encrypted passwords, and a complete audit log of every action." },
   { q: "Can our candidates track their own status?", a: "Yes. Every candidate can register on your public site and log in to a workspace showing their timeline, recruiter, company, job, and payment status." },
@@ -59,12 +59,20 @@ const FAQ = [
 ];
 
 export default function Home() {
+  const [banners, setBanners] = React.useState([]);
   React.useEffect(() => {
-    document.title = "BES Consultancy | Premier Recruitment & Placement Services";
+    fetch(`${process.env.REACT_APP_BACKEND_URL || ""}/api/public/banners`)
+      .then(r => r.json())
+      .then(data => setBanners(Array.isArray(data) ? data : []))
+      .catch(e => console.error("Failed to load banners:", e));
+  }, []);
+
+  React.useEffect(() => {
+    document.title = "BES Info Tech | Premier Recruitment & Placement Services";
     
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute("content", "BES Consultancy (BES Info Tech) is India's leading recruitment partner since 2010. We connect top talent with premier companies for IT, Non-IT, and campus placements.");
+      metaDesc.setAttribute("content", "BES Info Tech is India's leading recruitment partner since 2010. We connect top talent with premier companies for IT, Non-IT, and campus placements.");
     }
     
     const scriptId = "seo-schema-home";
@@ -79,17 +87,17 @@ export default function Home() {
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "BES Consultancy",
-        "alternateName": "BES Info Tech",
+        "name": "BES Info Tech",
+        "alternateName": "BES Consultancy",
         "url": window.location.origin,
-        "logo": window.location.origin + "/logo.png",
+        "logo": window.location.origin + "/bes_logo.png",
         "foundingDate": "2010"
       },
       {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
-        "name": "BES Consultancy",
-        "image": window.location.origin + "/logo.png",
+        "name": "BES Info Tech",
+        "image": window.location.origin + "/bes_logo.png",
         "@id": window.location.origin + "/#localbusiness",
         "url": window.location.origin,
         "telephone": "+91 90000 00000",
@@ -124,14 +132,14 @@ export default function Home() {
             <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
               className="mt-6 font-display text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tighter leading-[1.02]">
-              Welcome to BES Consultancy
+              Welcome to BES Info Tech
               <br />Your
               <span className="ml-3 bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-500 bg-clip-text text-transparent">Career Starts Here</span>.
             </motion.h1>
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
               className="mt-5 text-lg text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
-              For more than 15 years, BES Consultancy has helped thousands of students and professionals build successful careers. Register today and connect with India&apos;s leading companies.
+              For more than 15 years, BES Info Tech has helped thousands of students and professionals build successful careers. Register today and connect with India&apos;s leading companies.
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
@@ -201,12 +209,56 @@ export default function Home() {
             <div className="text-center max-w-2xl mx-auto">
               <div className="overline text-primary">Recruitment Workflow</div>
               <h2 className="mt-3 font-display text-4xl lg:text-5xl font-bold tracking-tighter">From registration to placement — automated.</h2>
-              <p className="mt-4 text-slate-600 dark:text-slate-300">Every candidate flows through the same predictable stages. BES Consultancy tracks it, notifies your team, and never lets a candidate fall through the cracks.</p>
+              <p className="mt-4 text-slate-600 dark:text-slate-300">Every candidate flows through the same predictable stages. BES Info Tech tracks it, notifies your team, and never lets a candidate fall through the cracks.</p>
             </div>
           </Reveal>
           <div className="mt-14"><WorkflowAnimation /></div>
         </div>
       </section>
+
+      {/* ================ BANNERS & NEWSLETTERS ================ */}
+      {banners.length > 0 && (
+        <section className="py-16 bg-slate-50/50 dark:bg-slate-900/10 border-y border-border/50">
+          <div className="mx-auto max-w-7xl px-6">
+            <Reveal>
+              <div className="text-center max-w-2xl mx-auto mb-12">
+                <div className="overline text-primary">Banners & Updates</div>
+                <h2 className="mt-3 font-display text-3xl lg:text-4xl font-bold tracking-tighter">Latest Announcements & Newsletters</h2>
+              </div>
+            </Reveal>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {banners.map((b) => (
+                <Reveal key={b.id}>
+                  <div className="rounded-2xl border border-border bg-white dark:bg-slate-950 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="aspect-[16/9] w-full bg-muted relative overflow-hidden">
+                      <img 
+                        src={`${process.env.REACT_APP_BACKEND_URL || ""}/api/files/${b.file_id}/download`} 
+                        alt={b.title || "Banner"}
+                        className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    {b.title && (
+                      <div className="p-5 border-t border-border/50">
+                        <h4 className="font-display font-semibold text-lg leading-snug">{b.title}</h4>
+                        {b.link && (
+                          <a 
+                            href={b.link} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
+                          >
+                            Learn More <ArrowRight className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ================ FEATURES ================ */}
       <section className="py-20 relative">
@@ -263,7 +315,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6">
           <Reveal>
             <div className="text-center max-w-2xl mx-auto">
-              <div className="overline text-primary">Why BES Consultancy</div>
+              <div className="overline text-primary">Why BES Info Tech</div>
               <h2 className="mt-3 font-display text-4xl lg:text-5xl font-bold tracking-tighter">Built for consultancies. Not sales teams.</h2>
             </div>
           </Reveal>

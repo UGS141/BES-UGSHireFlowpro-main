@@ -327,3 +327,67 @@ async def seed_placements_if_empty():
             short_description=f"{name} was placed at {co} as {role}.",
         )
         await db.placements.insert_one(p.model_dump())
+
+
+# ================================================================
+# LANDING PAGE BANNERS / NEWSLETTERS
+# ================================================================
+class Banner(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=new_id)
+    file_id: str
+    title: Optional[str] = None
+    link: Optional[str] = None
+    created_at: str = Field(default_factory=now_iso)
+
+@router.get("/public/banners")
+async def list_public_banners():
+    """Public route to list all banners/newsletters."""
+    items = await db.banners.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return items
+
+@router.get("/banners")
+async def list_admin_banners(current: dict = Depends(require_roles(["admin"]))):
+    """Admin route to list all banners/newsletters."""
+    items = await db.banners.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return items
+
+@router.post("/banners")
+async def create_banner(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    link: Optional[str] = Form(None),
+    current: dict = Depends(require_roles(["admin"]))
+):
+    """Admin route to upload a banner/newsletter image."""
+    try:
+        file_id = await _upload_placement_file(file, current["id"], "banner")
+        banner = Banner(file_id=file_id, title=title, link=link)
+        await db.banners.insert_one(banner.model_dump())
+        await log_activity(current, "banner.created", f"Uploaded banner image: {file.filename}", "banner", banner.id)
+        return banner.model_dump()
+    except UploadValidationError as ve:
+        return JSONResponse(status_code=400, content={"success": False, "error_code": ve.error_code, "message": ve.message})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+@router.delete("/banners/{bid}")
+async def delete_banner(bid: str, current: dict = Depends(require_roles(["admin"]))):
+    """Admin route to delete a banner/newsletter image."""
+    banner = await db.banners.find_one({"id": bid})
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    
+    # Clean up Cloudinary asset if present
+    file_ref = await db.files.find_one({"id": banner["file_id"]})
+    if file_ref and file_ref.get("public_id"):
+        try:
+            import cloudinary.uploader
+            cloudinary.uploader.destroy(file_ref["public_id"], resource_type=file_ref.get("resource_type") or "image")
+        except Exception as e:
+            print(f"Failed to destroy banner asset on delete: {e}")
+            
+    await db.files.delete_one({"id": banner["file_id"]})
+    await db.banners.delete_one({"id": bid})
+    await log_activity(current, "banner.deleted", f"Deleted banner image: {bid}", "banner", bid)
+    return {"success": True}

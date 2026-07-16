@@ -75,6 +75,140 @@ export default function Settings() {
           )}
         </Card>
       )}
+
+      {user?.role === "admin" && <BannersManagement />}
     </div>
+  );
+}
+
+function BannersManagement() {
+  const qc = useQueryClient();
+  const { data: banners = [], isLoading } = useQuery({
+    queryKey: ["admin-banners"],
+    queryFn: async () => (await api.get("/banners")).data,
+  });
+
+  const [title, setTitle] = useState("");
+  const [link, setLink] = useState("");
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      toast.error("Please select an image file");
+      return;
+    }
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    if (title) fd.append("title", title);
+    if (link) fd.append("link", link);
+
+    try {
+      await api.post("/banners", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Banner uploaded successfully");
+      setTitle("");
+      setLink("");
+      setFile(null);
+      const fileInput = document.getElementById("banner-file-input");
+      if (fileInput) fileInput.value = "";
+      qc.invalidateQueries({ queryKey: ["admin-banners"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to upload banner");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (bid) => {
+    try {
+      await api.delete(`/banners/${bid}`);
+      toast.success("Banner deleted");
+      qc.invalidateQueries({ queryKey: ["admin-banners"] });
+    } catch {
+      toast.error("Failed to delete banner");
+    }
+  };
+
+  return (
+    <Card className="p-6 border-border">
+      <h3 className="font-display font-semibold mb-4">Landing Page Banners & Newsletters</h3>
+      
+      {/* Upload Form */}
+      <form onSubmit={handleUpload} className="space-y-4 mb-6 border-b border-border pb-6">
+        <div className="grid md:grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="banner-file-input">Banner Image *</Label>
+            <Input 
+              id="banner-file-input" 
+              type="file" 
+              accept="image/*" 
+              required 
+              onChange={(e) => setFile(e.target.files?.[0] || null)} 
+            />
+          </div>
+          <div>
+            <Label>Title (Optional)</Label>
+            <Input 
+              placeholder="e.g. Campus Recruitment Drive 2026" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Redirect Link (Optional)</Label>
+            <Input 
+              placeholder="e.g. https://example.com/details" 
+              value={link} 
+              onChange={(e) => setLink(e.target.value)} 
+            />
+          </div>
+        </div>
+        <Button type="submit" disabled={uploading}>
+          {uploading ? "Uploading..." : "Upload Banner"}
+        </Button>
+      </form>
+
+      {/* Banners List */}
+      <div>
+        <h4 className="text-sm font-semibold mb-3">Current Banners</h4>
+        {isLoading ? (
+          <div className="text-muted-foreground text-sm">Loading banners...</div>
+        ) : banners.length === 0 ? (
+          <div className="text-muted-foreground text-sm">No banners uploaded yet.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {banners.map((b) => (
+              <div key={b.id} className="flex gap-4 p-3 border border-border rounded-xl bg-slate-50/50 dark:bg-slate-900/10">
+                <div className="h-16 w-28 bg-muted rounded overflow-hidden shrink-0">
+                  <img 
+                    src={`${process.env.REACT_APP_BACKEND_URL || ""}/api/files/${b.file_id}/download`} 
+                    alt={b.title || "Banner"} 
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="font-semibold text-sm truncate">{b.title || "Untitled Banner"}</div>
+                    {b.link && <div className="text-xs text-muted-foreground truncate">{b.link}</div>}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="self-start text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
+                    onClick={() => handleDelete(b.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }

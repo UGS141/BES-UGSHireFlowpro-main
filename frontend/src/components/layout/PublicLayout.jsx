@@ -23,10 +23,10 @@ export function PublicLayout() {
       <header className="sticky top-0 z-40 glass border-b border-border/60">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5" data-testid="brand-logo">
-            <img src="/favicon.png" alt="BES" className="h-10 w-10 object-contain" />
+            <img src="/bes_logo.png" alt="BES" className="h-10 w-10 object-contain" />
             <div className="leading-none">
               <div className="font-display font-bold text-lg tracking-tight bg-gradient-to-r from-[#4A5FBF] via-[#5B8CB5] to-[#3EB489] bg-clip-text text-transparent">
-                BES Consultancy
+                BES Info Tech
               </div>
               <div className="text-[10px] text-muted-foreground overline mt-0.5">Placements Since 2010</div>
             </div>
@@ -77,11 +77,11 @@ export function PublicLayout() {
         <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3">
-              <img src="/favicon.png" alt="BES" className="h-11 w-11 object-contain" />
-              <div className="font-display font-bold text-3xl text-white tracking-tighter">BES Consultancy</div>
+              <img src="/bes_logo.png" alt="BES" className="h-11 w-11 object-contain" />
+              <div className="font-display font-bold text-3xl text-white tracking-tighter">BES Info Tech</div>
             </div>
             <p className="mt-3 text-sm text-slate-400 max-w-md leading-relaxed">
-              India&apos;s trusted placement consultancy since 2010. Helping students and professionals build careers with leading companies.
+              India&apos;s trusted placement partner since 2010. Helping students and professionals build careers with leading companies.
             </p>
           </div>
           <div>
