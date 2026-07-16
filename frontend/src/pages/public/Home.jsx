@@ -92,11 +92,11 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
-    document.title = "BES Info Tech | Premier Recruitment & Placement Services";
+    document.title = "BES Info Tech Pvt Limited — Empowering through Human Capital";
     
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute("content", "BES Info Tech is India's leading recruitment partner since 2010. We connect top talent with premier companies for IT, Non-IT, and campus placements.");
+      metaDesc.setAttribute("content", "BES Info Tech Pvt Limited provides world-class manpower solutions, IT recruitment, and campus placements in Nellore and across India to drive your business forward.");
     }
     
     const scriptId = "seo-schema-home";
