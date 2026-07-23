@@ -1,5 +1,6 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
+import api from "@/lib/api";
 import "@/App.css";
 import { useAuth } from "@/context/AuthContext";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -31,9 +32,75 @@ import Settings from "@/pages/admin/Settings";
 import CandidateHome from "@/pages/candidate/CandidateHome";
 
 function RequireAuth({ roles }) {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/login" replace />;
+  const { user, logout } = useAuth();
+  const [isValidating, setIsValidating] = useState(true);
+  const [isValid, setIsValid] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const token = localStorage.getItem("ugs_token");
+    const storedUser = localStorage.getItem("ugs_user");
+
+    if (!token || !storedUser || !user) {
+      if (isMounted) {
+        setIsValid(false);
+        setIsValidating(false);
+        logout();
+      }
+      return;
+    }
+
+    setIsValidating(true);
+    api.get("/auth/me")
+      .then((res) => {
+        if (isMounted) {
+          const serverUser = res.data;
+          if (roles && !roles.includes(serverUser.role)) {
+            setIsValid(false);
+          } else {
+            setIsValid(true);
+          }
+          setIsValidating(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsValid(false);
+          setIsValidating(false);
+          logout();
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname, roles, user, logout]);
+
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isValid) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <Outlet />;
 }
 

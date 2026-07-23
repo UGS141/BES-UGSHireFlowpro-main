@@ -34,8 +34,9 @@ export function AuthProvider({ children }) {
     try { await api.post("/auth/log-logout"); } catch {}
     localStorage.removeItem("ugs_token");
     localStorage.removeItem("ugs_user");
+    localStorage.removeItem("ugs_refresh_token");
     setUser(null);
-    window.location.href = "/";
+    window.location.replace("/login");
   };
 
   return (

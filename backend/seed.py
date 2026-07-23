@@ -15,17 +15,17 @@ async def seed_all():
     emp1_id, emp2_id = new_id(), new_id()
 
     await db.users.insert_many([
-        {"id": admin_id, "email": "admin@ugs.com", "full_name": "UGS Admin",
+        {"id": admin_id, "email": "admin@ugshireflow.com", "full_name": "Bhargav Admin",
          "role": "admin", "phone": "+919000000001", "is_active": True,
-         "password_hash": hash_password("Admin@123"), "created_at": now_iso()},
-        {"id": emp1_id, "email": "priya@ugs.com", "full_name": "Priya Sharma",
-         "role": "employee", "phone": "+919000000002", "designation": "Senior Recruiter",
+         "password_hash": hash_password("Bhargav@9669"), "created_at": now_iso()},
+        {"id": emp1_id, "email": "srikar@ugshireflow.com", "full_name": "Srikar Recruiter",
+         "role": "employee", "phone": "+919949954313", "designation": "Senior Recruiter",
          "department": "Tech Hiring", "is_active": True,
-         "password_hash": hash_password("Employee@123"), "created_at": now_iso()},
-        {"id": emp2_id, "email": "rahul@ugs.com", "full_name": "Rahul Verma",
-         "role": "employee", "phone": "+919000000003", "designation": "Recruitment Lead",
+         "password_hash": hash_password("Srikar@9669"), "created_at": now_iso()},
+        {"id": emp2_id, "email": "hrteam@ugshireflow.com", "full_name": "HR Team User",
+         "role": "employee", "phone": "+919949523474", "designation": "Recruitment Lead",
          "department": "Product Hiring", "is_active": True,
-         "password_hash": hash_password("Employee@123"), "created_at": now_iso()},
+         "password_hash": hash_password("Hrteam@9669"), "created_at": now_iso()},
     ])
 
     # Companies
@@ -190,12 +190,3 @@ async def seed_all():
             await db.batches.update_one({"id": c.batch_id},
                                           {"$addToSet": {"candidate_ids": c.id}})
 
-    # Sample candidate login (Arjun)
-    arjun = await db.candidates.find_one({"email": "arjun.k@example.com"})
-    if arjun:
-        await db.users.insert_one({
-            "id": new_id(), "email": arjun["email"], "full_name": arjun["full_name"],
-            "role": "candidate", "phone": arjun["phone"], "is_active": True,
-            "candidate_id": arjun["id"],
-            "password_hash": hash_password("Candidate@123"), "created_at": now_iso()
-        })

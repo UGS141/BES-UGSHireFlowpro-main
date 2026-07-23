@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,25 +8,29 @@ import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      nav(user.role === "candidate" ? "/me" : "/app", { replace: true });
+    }
+  }, [user, nav]);
+
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const user = await login(email, password);
-      toast.success(`Welcome, ${user.full_name}`);
-      nav(user.role === "candidate" ? "/me" : "/app");
+      const loggedUser = await login(email, password);
+      toast.success(`Welcome, ${loggedUser.full_name}`);
+      nav(loggedUser.role === "candidate" ? "/me" : "/app", { replace: true });
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Login failed");
     } finally { setLoading(false); }
   };
-
-  const quick = (e, p) => { setEmail(e); setPassword(p); };
 
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-background">
@@ -41,14 +45,6 @@ export default function Login() {
           <p className="mt-4 text-white/85 max-w-md leading-relaxed">
             Sign in to your console to manage candidates, companies, and placements.
           </p>
-        </div>
-        <div className="absolute bottom-12 left-12 right-12 glass rounded-2xl p-5 bg-white/10 border-white/20">
-          <div className="overline text-white/70 text-[10px]">Demo credentials</div>
-          <div className="mt-2 space-y-1.5 text-sm">
-            <button onClick={() => quick("admin@ugs.com", "Admin@123")} className="block hover:underline" data-testid="demo-admin">Admin · admin@ugs.com / Admin@123</button>
-            <button onClick={() => quick("priya@ugs.com", "Employee@123")} className="block hover:underline" data-testid="demo-employee">Recruiter · priya@ugs.com / Employee@123</button>
-            <button onClick={() => quick("arjun.k@example.com", "Candidate@123")} className="block hover:underline" data-testid="demo-candidate">Candidate · arjun.k@example.com / Candidate@123</button>
-          </div>
         </div>
       </div>
       <div className="flex items-center justify-center p-8">

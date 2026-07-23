@@ -164,6 +164,34 @@ async def startup():
         await seed_all()
         logger.info("Seeded initial data")
 
+    # Ensure production administrator exists
+    if not await db.users.find_one({"email": "admin@ugshireflow.com"}):
+        await db.users.insert_one({
+            "id": new_id(), "email": "admin@ugshireflow.com", "full_name": "Bhargav Admin",
+            "role": "admin", "phone": "+919000000001", "is_active": True,
+            "password_hash": hash_password("Bhargav@9669"), "created_at": now_iso()
+        })
+        logger.info("Ensured production super admin account exists")
+        
+    # Ensure production employees exist
+    if not await db.users.find_one({"email": "srikar@ugshireflow.com"}):
+        await db.users.insert_one({
+            "id": new_id(), "email": "srikar@ugshireflow.com", "full_name": "Srikar Recruiter",
+            "role": "employee", "phone": "+919949954313", "designation": "Senior Recruiter",
+            "department": "Tech Hiring", "is_active": True,
+            "password_hash": hash_password("Srikar@9669"), "created_at": now_iso()
+        })
+        logger.info("Ensured production employee srikar exists")
+
+    if not await db.users.find_one({"email": "hrteam@ugshireflow.com"}):
+        await db.users.insert_one({
+            "id": new_id(), "email": "hrteam@ugshireflow.com", "full_name": "HR Team User",
+            "role": "employee", "phone": "+919949523474", "designation": "Recruitment Lead",
+            "department": "Product Hiring", "is_active": True,
+            "password_hash": hash_password("Hrteam@9669"), "created_at": now_iso()
+        })
+        logger.info("Ensured production employee hrteam exists")
+
     # Seed placements + indexes for new v3 collections
     try:
         await seed_placements_if_empty()
@@ -1245,6 +1273,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 # ---------- ERROR HANDLERS ----------
