@@ -1,5 +1,5 @@
 """UGS HireFlow - Main FastAPI application."""
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Query, Response, Header, Form
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File, Query, Response, Header, Form, Request
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
